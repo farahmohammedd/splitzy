@@ -25,4 +25,8 @@ abstract final class AppSizes {
 
   /// Maximum width of screen content on tablets, desktop and web.
   static const double maxContentWidth = 480;
+
+  /// Below this available height a screen is "compact" (short phones,
+  /// landscape) and tightens its gaps so content needs little scrolling.
+  static const double compactHeight = 700;
 }

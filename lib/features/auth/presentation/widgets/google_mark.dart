@@ -5,8 +5,8 @@ import 'package:splitzy/core/theme/app_colors.dart';
 
 /// A drawn approximation of the multicolor Google "G" mark.
 ///
-/// Temporary: Google's sign-in branding guidelines call for the official
-/// logo asset. Replace this with that asset when Google Sign-In is wired up.
+/// Google's sign-in branding guidelines call for the official logo asset;
+/// replacing this drawing with it is a separate, not yet scheduled, change.
 class GoogleMark extends StatelessWidget {
   const GoogleMark({super.key, this.size = 20});
 
