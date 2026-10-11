@@ -2,16 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:splitzy/app.dart';
+import 'package:splitzy/core/router/app_router.dart';
 import 'package:splitzy/core/theme/app_brand_colors.dart';
 import 'package:splitzy/core/theme/app_colors.dart';
-import 'package:splitzy/features/auth/presentation/login_screen.dart';
-import 'package:splitzy/features/splash/presentation/launch_screen.dart';
-import 'package:splitzy/features/splash/presentation/splash_screen.dart';
+import 'package:splitzy/injection_container.dart';
+
+import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_error_reporter.dart';
 
 void main() {
   group('SplitzyApp', () {
     Future<void> pumpApp(WidgetTester tester) {
-      return tester.pumpWidget(const ProviderScope(child: SplitzyApp()));
+      final repository = FakeAuthRepository();
+      addTearDown(repository.dispose);
+      return tester.pumpWidget(
+        ProviderScope(
+          overrides: InjectionContainer(
+            authRepository: repository,
+            errorReporter: FakeErrorReporter(),
+          ).overrides,
+          child: const SplitzyApp(),
+        ),
+      );
     }
 
     testWidgets('builds inside a ProviderScope', (tester) async {
@@ -40,49 +52,17 @@ void main() {
       expect(theme.scaffoldBackgroundColor, AppColors.background);
       expect(context.brandColors.moneyAccent, AppColors.moneyAccent);
     });
-  });
 
-  group('Temporary navigation flow', () {
-    Future<void> pumpApp(WidgetTester tester) {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      return tester.pumpWidget(const ProviderScope(child: SplitzyApp()));
-    }
-
-    testWidgets('starts on the launch screen', (tester) async {
+    testWidgets('routes with the app router', (tester) async {
       await pumpApp(tester);
 
-      expect(find.byType(LaunchScreen), findsOneWidget);
-      expect(find.byType(SplashScreen), findsNothing);
-    });
-
-    testWidgets('replaces Launch with Splash after the minimum duration', (
-      tester,
-    ) async {
-      await pumpApp(tester);
-      await tester.pump(LaunchScreen.defaultMinimumDuration);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SplashScreen), findsOneWidget);
-      expect(find.byType(LaunchScreen), findsNothing);
-    });
-
-    testWidgets('Get Started opens Login, and back returns to Splash', (
-      tester,
-    ) async {
-      await pumpApp(tester);
-      await tester.pump(LaunchScreen.defaultMinimumDuration);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
-
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.byType(SplashScreen), findsOneWidget);
-      expect(find.byType(LaunchScreen), findsNothing);
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SplitzyApp)),
+      );
+      expect(app.routerConfig, same(container.read(appRouterProvider)));
     });
   });
+
+  // Navigation flow tests live in test/core/router/app_router_test.dart.
 }

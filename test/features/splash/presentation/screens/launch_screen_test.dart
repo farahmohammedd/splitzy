@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:splitzy/core/assets/app_images.dart';
 import 'package:splitzy/core/theme/app_theme.dart';
 import 'package:splitzy/core/widgets/brand_background.dart';
-import 'package:splitzy/features/splash/presentation/launch_screen.dart';
+import 'package:splitzy/features/splash/presentation/screens/launch_screen.dart';
 
 const _duration = LaunchScreen.defaultMinimumDuration;
 

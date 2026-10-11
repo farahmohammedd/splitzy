@@ -17,7 +17,7 @@ class LaunchScreen extends StatefulWidget {
     this.onLoaded,
   });
 
-  static const Duration defaultMinimumDuration = Duration(milliseconds: 2000);
+  static const Duration defaultMinimumDuration = Duration(milliseconds: 3000);
 
   final Duration minimumDuration;
   final VoidCallback? onLoaded;
@@ -108,7 +108,8 @@ class _LaunchScreenState extends State<LaunchScreen>
                       child: _LaunchContent(
                         logoSize: logoSize,
                         barWidth: barWidth,
-                        sectionGap: constraints.maxHeight < 700
+                        sectionGap:
+                            constraints.maxHeight < AppSizes.compactHeight
                             ? AppSpacing.lg
                             : AppSpacing.xl + AppSpacing.sm,
                         logoFade: reduceMotion ? shown : _logoFade,
@@ -146,6 +147,9 @@ class _LaunchContent extends StatelessWidget {
     required this.textFade,
     required this.progress,
   });
+
+  /// The reference track is a paler sage than the theme default.
+  static const double _trackOpacity = 0.55;
 
   final double logoSize;
   final double barWidth;
@@ -203,10 +207,9 @@ class _LaunchContent extends StatelessWidget {
             animation: progress,
             builder: (context, _) => LinearProgressIndicator(
               value: progress.value,
-              // The reference track is a paler sage than the theme default.
               backgroundColor: Theme.of(
                 context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.55),
+              ).colorScheme.primaryContainer.withValues(alpha: _trackOpacity),
               borderRadius: BorderRadius.circular(AppRadius.pill),
               semanticsLabel: 'Loading',
             ),
