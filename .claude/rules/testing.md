@@ -56,7 +56,12 @@ A change that adds or modifies business logic without tests is **not done**.
 - Tests must be deterministic: no reliance on `DateTime.now()`, randomness, or ordering —
   inject clocks/ID generators where needed.
 - Cover edge cases for money: zero, single member, uneven division, large amounts,
-  negative/invalid input.
+  negative/invalid input. In particular (see `CLAUDE.md` → Money):
+  - equal split: leftover piastres go to the first members in order; shares always sum
+    to the amount;
+  - custom split: rejected when shares do not sum to the amount or any share is negative;
+  - amount limits: 0, 1 piastre, the maximum, above the maximum;
+  - balances: a group's balances always sum to zero.
 
 ## Widget tests
 

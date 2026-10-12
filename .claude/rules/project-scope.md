@@ -104,11 +104,7 @@ dependencies as a side effect.
 
 - **Money is never a `double`.** Represent amounts as integer minor units (e.g. piastres,
   cents) plus a currency code. Money calculations are pure Dart, deterministic and tested.
-- **Unresolved** (`CLAUDE.md` → Open Decisions #1) — decide explicitly before the Expenses
-  feature is implemented:
-  - currency scope (e.g. one currency per group or not);
-  - remainder distribution strategy for equal splits;
-  - deterministic ordering / tie-breaking for remainders and settlements;
-  - money display/formatting strategy (any formatting package is a dependency decision).
+- Money rules are decided — see `CLAUDE.md` → Money and Expense Calculations (currency,
+  limits, payer, equal/custom splits, balances, display).
 - Use clear domain language consistently: `Group`, `Member`, `Expense`, `Split`, `Balance`,
   `Settlement`. Do not introduce synonyms for existing concepts.
