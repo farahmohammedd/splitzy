@@ -65,11 +65,6 @@ the decision in the relevant rule file and remove it from this list.
 The numbers are stable IDs that rule files refer to (e.g. "Open Decisions #6"): a decided
 item is removed without renumbering the others.
 
-- **#1 Money** (before the Expenses feature):
-  - currency scope (e.g. one currency per group or not);
-  - remainder distribution strategy for equal splits;
-  - deterministic ordering / tie-breaking for remainders and settlements;
-  - money display/formatting strategy (any formatting package is a dependency decision).
 - **#2 Hive cache policy** (before offline persistence): what is cached, invalidation and
   sync. The maintenance status of the installed `hive` package should also be checked
   before Hive is first used.
@@ -81,8 +76,20 @@ item is removed without renumbering the others.
 - **#7 CI scope**: what the approved GitHub Actions CI runs, and when it is set up. (CI
   needs the git-ignored Firebase configuration files — see Firebase.)
 
-Decided: #5 Firebase configuration files are not committed (see Firebase); #8 design
-references in `docs/design/references/` are committed (see Assets).
+Decided: #1 Money (see Money and Expense Calculations); #5 Firebase configuration files
+are not committed (see Firebase); #8 design references in `docs/design/references/` are
+committed (see Assets).
+
+---
+
+## Future (not now)
+
+Not to be implemented until the developer decides otherwise:
+
+- Groups shared between registered users (members found by name or email). For now
+  members are names only and a group belongs to its creator, who is its first member.
+- Settlements, search, notifications.
+- Receipt scanning — cancelled until the developer decides otherwise.
 
 ---
 
@@ -350,10 +357,23 @@ All calculations involving:
 
 must be deterministic and testable as pure Dart logic.
 
-Equal-split remainder handling must be explicitly defined before the expense
-calculation feature is implemented.
-
 Money calculations belong outside widgets.
+
+Decided (Money, Open Decision #1):
+
+- Currency: EGP only, app-wide. Other currencies are future work.
+- Representation: integer piastres (`int`) plus the currency code.
+- Expense amount: at least 1 piastre, at most EGP 1,000,000.
+- Payer: exactly one member pays the whole expense.
+- Split types, chosen per expense:
+  - equal: amount ÷ members; leftover piastres go one each to the first members in the
+    order they were added to the group;
+  - custom amounts: every share ≥ 0 and the shares sum to the amount exactly, otherwise
+    the expense is rejected.
+- Balance of a member = total they paid − total of their shares. Positive: they are owed.
+  Negative: they owe. A group's balances always sum to zero.
+- Display: `EGP 1,234.50`, by a small tested pure-Dart formatter (no formatting package).
+- Settlements (recording a payment) are future work.
 
 ---
 
