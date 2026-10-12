@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:splitzy/core/error/failures.dart';
 import 'package:splitzy/core/router/app_routes.dart';
+import 'package:splitzy/core/router/home_shell.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/presentation/screens/login_page.dart';
 import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart';
-import 'package:splitzy/features/auth/presentation/providers/sign_out_controller.dart';
+import 'package:splitzy/features/auth/presentation/screens/profile_page.dart';
 import 'package:splitzy/features/auth/presentation/screens/sign_up_page.dart';
-import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
 import 'package:splitzy/features/splash/presentation/screens/launch_screen.dart';
 import 'package:splitzy/features/splash/presentation/screens/splash_screen.dart';
 
@@ -18,7 +16,8 @@ part 'app_router.g.dart';
 /// The app's single [GoRouter].
 ///
 /// Flow: Launch --(replace)--> Splash --(push)--> Login <--(push/pop)--> Sign Up.
-/// Signed-in users are redirected to Home (see [authRedirect]).
+/// Signed-in users are redirected to Home, the first of the signed-in tabs
+/// (see [HomeShell] and [authRedirect]).
 ///
 /// Kept alive for the whole app lifetime: recreating the router would reset
 /// the navigation stack. It therefore *listens* to the auth state and
@@ -60,9 +59,48 @@ GoRouter appRouter(Ref ref) {
           onSignIn: () => _backTo(context, AppRoutes.login),
         ),
       ),
-      GoRoute(
-        path: AppRoutes.home,
-        builder: (context, state) => const _HomeRoute(),
+      // The signed-in tabs. Each branch keeps its own navigation stack.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            HomeShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                builder: (context, state) => const HomeRoute(),
+              ),
+            ],
+          ),
+          // TEMPORARY: Groups and Activity show ComingSoonTab until their
+          // features are built.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.groups,
+                builder: (context, state) =>
+                    const ComingSoonTab(title: 'Groups'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.activity,
+                builder: (context, state) =>
+                    const ComingSoonTab(title: 'Activity'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
+          ),
+        ],
       ),
     ],
   );
@@ -79,13 +117,21 @@ const _signedOutLocations = {
   AppRoutes.signUp,
 };
 
+/// The signed-in tabs; signed-out users are sent to Splash.
+const _signedInLocations = {
+  AppRoutes.home,
+  AppRoutes.groups,
+  AppRoutes.activity,
+  AppRoutes.profile,
+};
+
 /// Where to send the user from [location], or `null` to stay.
 ///
 /// - Launch always plays; afterwards it goes to Splash, which sends signed-in
 ///   users on to Home.
 /// - While the auth state is unknown (loading or failed), nobody is moved.
 /// - Signed-in users on a signed-out screen go to Home; signed-out users on
-///   Home go to Splash.
+///   a signed-in tab go to Splash.
 ///
 /// The two target groups do not overlap, so a redirect never loops.
 @visibleForTesting
@@ -94,32 +140,10 @@ String? authRedirect(AsyncValue<AppUser?> authState, String location) {
 
   final signedIn = authState.value != null;
   if (signedIn && _signedOutLocations.contains(location)) return AppRoutes.home;
-  if (!signedIn && location == AppRoutes.home) return AppRoutes.splash;
-  return null;
-}
-
-/// Wires [HomeScreen]'s log-out action to the auth feature (the router, as
-/// app root, may connect features). A successful log-out changes the auth
-/// state and the redirect moves the user to Splash; a failure keeps them on
-/// Home and shows its message in a SnackBar (the generic fallback for
-/// anything that is not a known failure).
-class _HomeRoute extends ConsumerWidget {
-  const _HomeRoute();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(signOutControllerProvider, (_, next) {
-      if (next case AsyncError(:final error)) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(messageFor(error))));
-      }
-    });
-
-    return HomeScreen(
-      onLogOut: () => ref.read(signOutControllerProvider.notifier).logOut(),
-    );
+  if (!signedIn && _signedInLocations.contains(location)) {
+    return AppRoutes.splash;
   }
+  return null;
 }
 
 /// Pops the current route if possible.

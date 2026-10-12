@@ -11,7 +11,8 @@ part of 'app_router.dart';
 /// The app's single [GoRouter].
 ///
 /// Flow: Launch --(replace)--> Splash --(push)--> Login <--(push/pop)--> Sign Up.
-/// Signed-in users are redirected to Home (see [authRedirect]).
+/// Signed-in users are redirected to Home, the first of the signed-in tabs
+/// (see [HomeShell] and [authRedirect]).
 ///
 /// Kept alive for the whole app lifetime: recreating the router would reset
 /// the navigation stack. It therefore *listens* to the auth state and
@@ -23,7 +24,8 @@ final appRouterProvider = AppRouterProvider._();
 /// The app's single [GoRouter].
 ///
 /// Flow: Launch --(replace)--> Splash --(push)--> Login <--(push/pop)--> Sign Up.
-/// Signed-in users are redirected to Home (see [authRedirect]).
+/// Signed-in users are redirected to Home, the first of the signed-in tabs
+/// (see [HomeShell] and [authRedirect]).
 ///
 /// Kept alive for the whole app lifetime: recreating the router would reset
 /// the navigation stack. It therefore *listens* to the auth state and
@@ -35,7 +37,8 @@ final class AppRouterProvider
   /// The app's single [GoRouter].
   ///
   /// Flow: Launch --(replace)--> Splash --(push)--> Login <--(push/pop)--> Sign Up.
-  /// Signed-in users are redirected to Home (see [authRedirect]).
+  /// Signed-in users are redirected to Home, the first of the signed-in tabs
+  /// (see [HomeShell] and [authRedirect]).
   ///
   /// Kept alive for the whole app lifetime: recreating the router would reset
   /// the navigation stack. It therefore *listens* to the auth state and
@@ -73,4 +76,4 @@ final class AppRouterProvider
   }
 }
 
-String _$appRouterHash() => r'0e76b26569befaffe213160b4cf59e0582f555d5';
+String _$appRouterHash() => r'ff941d26f0f3a5bb5f4ddc40f07ac51fec3af8de';

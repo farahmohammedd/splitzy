@@ -8,6 +8,7 @@ import 'package:splitzy/app.dart';
 import 'package:splitzy/core/error/failures.dart';
 import 'package:splitzy/core/router/app_router.dart';
 import 'package:splitzy/core/router/app_routes.dart';
+import 'package:splitzy/core/router/home_shell.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/domain/failures/auth_failure.dart';
 import 'package:splitzy/features/auth/presentation/screens/login_screen.dart';
@@ -76,6 +77,16 @@ Future<void> _tapText(WidgetTester tester, String text) async {
 }
 
 Finder _field(String hint) => find.widgetWithText(TextField, hint);
+
+/// Opens the Profile tab, where Log out lives.
+Future<void> _openProfile(WidgetTester tester) async {
+  await tester.tap(
+    find.descendant(of: find.byType(HomeShell), matching: find.text('Profile')),
+  );
+  await tester.pumpAndSettle();
+}
+
+final _logOut = find.text('Log out');
 
 /// Fills in and submits the Login form.
 Future<void> _logIn(
@@ -306,7 +317,8 @@ void main() {
         await _tapText(tester, 'Continue with Google');
         expect(_location(tester), AppRoutes.home);
 
-        await tester.tap(find.byTooltip('Log out'));
+        await _openProfile(tester);
+        await tester.tap(_logOut);
         await tester.pumpAndSettle();
 
         expect(auth.signOutCalls, 1);
@@ -430,7 +442,7 @@ void main() {
         expect(_location(tester), AppRoutes.home);
       });
 
-      testWidgets('Log out on Home returns to Splash', (tester) async {
+      testWidgets('Log out on Profile returns to Splash', (tester) async {
         final auth = await _pumpApp(
           tester,
           repository: FakeAuthRepository(
@@ -438,8 +450,9 @@ void main() {
           ),
         );
         await _finishLoading(tester);
+        await _openProfile(tester);
 
-        await tester.tap(find.byTooltip('Log out'));
+        await tester.tap(_logOut);
         await tester.pumpAndSettle();
 
         expect(auth.signOutCalls, 1);
@@ -448,7 +461,7 @@ void main() {
       });
 
       testWidgets(
-        "a failed log-out shows the failure's message and stays on Home",
+        "a failed log-out shows the failure's message and stays on Profile",
         (tester) async {
           final auth = await _pumpApp(
             tester,
@@ -457,9 +470,10 @@ void main() {
             ),
           );
           await _finishLoading(tester);
+          await _openProfile(tester);
           auth.failNextWith(const NetworkFailure());
 
-          await tester.tap(find.byTooltip('Log out'));
+          await tester.tap(_logOut);
           await tester.pump();
 
           expect(
@@ -469,7 +483,7 @@ void main() {
             ),
             findsOneWidget,
           );
-          expect(_location(tester), AppRoutes.home);
+          expect(_location(tester), AppRoutes.profile);
         },
       );
 
@@ -483,9 +497,10 @@ void main() {
           ),
         );
         await _finishLoading(tester);
+        await _openProfile(tester);
         auth.failNextWith(const UnknownAuthFailure('internal-error'));
 
-        await tester.tap(find.byTooltip('Log out'));
+        await tester.tap(_logOut);
         await tester.pump();
 
         expect(
@@ -497,7 +512,7 @@ void main() {
         );
         // The technical code is never shown.
         expect(find.textContaining('internal-error'), findsNothing);
-        expect(_location(tester), AppRoutes.home);
+        expect(_location(tester), AppRoutes.profile);
       });
 
       testWidgets('an unexpected log-out error shows the generic message', (
@@ -510,9 +525,10 @@ void main() {
           ),
         );
         await _finishLoading(tester);
+        await _openProfile(tester);
         auth.throwNextWith(StateError('secret detail'), StackTrace.empty);
 
-        await tester.tap(find.byTooltip('Log out'));
+        await tester.tap(_logOut);
         await tester.pump();
 
         expect(
@@ -523,7 +539,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.textContaining('secret detail'), findsNothing);
-        expect(_location(tester), AppRoutes.home);
+        expect(_location(tester), AppRoutes.profile);
       });
 
       testWidgets('creating an account reaches Home', (tester) async {
@@ -571,6 +587,143 @@ void main() {
 
         expect(_location(tester), AppRoutes.splash);
       });
+
+      testWidgets('a signed-out user cannot open any signed-in tab', (
+        tester,
+      ) async {
+        await _pumpApp(tester);
+        await _finishLoading(tester);
+
+        for (final location in [
+          AppRoutes.groups,
+          AppRoutes.activity,
+          AppRoutes.profile,
+        ]) {
+          _router(tester).go(location);
+          await tester.pumpAndSettle();
+
+          expect(_location(tester), AppRoutes.splash, reason: location);
+        }
+      });
+    });
+
+    group('signed-in tabs', () {
+      /// Pumps the app signed in and waits until it reaches Home.
+      Future<void> pumpSignedIn(WidgetTester tester) async {
+        await _pumpApp(
+          tester,
+          repository: FakeAuthRepository(
+            signedInUser: FakeAuthRepository.defaultUser,
+          ),
+        );
+        await _finishLoading(tester);
+      }
+
+      Finder tab(String label) => find.descendant(
+        of: find.byType(HomeShell),
+        matching: find.text(label),
+      );
+
+      testWidgets('start on Home', (tester) async {
+        await pumpSignedIn(tester);
+
+        expect(_location(tester), AppRoutes.home);
+        expect(find.byType(HomeScreen), findsOneWidget);
+        for (final label in ['Home', 'Groups', 'Activity', 'Profile']) {
+          expect(tab(label), findsOneWidget, reason: label);
+        }
+      });
+
+      testWidgets('each tab opens its page', (tester) async {
+        await pumpSignedIn(tester);
+
+        for (final (label, location) in [
+          ('Groups', AppRoutes.groups),
+          ('Activity', AppRoutes.activity),
+          ('Profile', AppRoutes.profile),
+          ('Home', AppRoutes.home),
+        ]) {
+          await tester.tap(tab(label));
+          await tester.pumpAndSettle();
+
+          expect(_location(tester), location, reason: label);
+        }
+        expect(find.byType(HomeScreen), findsOneWidget);
+      });
+
+      testWidgets('tabs that are not built yet say Coming soon', (
+        tester,
+      ) async {
+        await pumpSignedIn(tester);
+
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Coming soon'), findsOneWidget);
+      });
+
+      testWidgets('Home greets the signed-in user by name', (tester) async {
+        await pumpSignedIn(tester);
+
+        expect(
+          find.descendant(
+            of: find.byType(HomeScreen),
+            matching: find.text(FakeAuthRepository.defaultUser.nameToShow),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets("Home's quick actions say Coming soon", (tester) async {
+        await pumpSignedIn(tester);
+
+        for (final action in ['Add Expense', 'New Group']) {
+          await tester.tap(find.text(action));
+          await tester.pump();
+
+          expect(
+            find.descendant(
+              of: find.byType(SnackBar),
+              matching: find.text('Coming soon'),
+            ),
+            findsOneWidget,
+            reason: action,
+          );
+          expect(_location(tester), AppRoutes.home, reason: action);
+        }
+      });
+
+      testWidgets('the bottom bar fits a small phone with 2x text scaling', (
+        tester,
+      ) async {
+        await pumpSignedIn(tester);
+        tester.view.physicalSize = const Size(320, 568);
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await tester.pumpAndSettle();
+
+        await tester.tap(tab('Profile'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(_location(tester), AppRoutes.profile);
+      });
+
+      testWidgets('the Add button says Coming soon', (tester) async {
+        await pumpSignedIn(tester);
+
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pump();
+
+        expect(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.text('Coming soon'),
+          ),
+          findsOneWidget,
+        );
+        expect(_location(tester), AppRoutes.home);
+      });
     });
 
     group('Splash page transition', () {
@@ -609,6 +762,12 @@ void main() {
     const signedIn = AsyncData<AppUser?>(FakeAuthRepository.defaultUser);
     const signedOut = AsyncData<AppUser?>(null);
     const loading = AsyncLoading<AppUser?>();
+    const signedInTabs = [
+      AppRoutes.home,
+      AppRoutes.groups,
+      AppRoutes.activity,
+      AppRoutes.profile,
+    ];
 
     test('never redirects away from Launch', () {
       for (final state in [signedIn, signedOut, loading]) {
@@ -622,7 +781,7 @@ void main() {
         AppRoutes.splash,
         AppRoutes.login,
         AppRoutes.signUp,
-        AppRoutes.home,
+        ...signedInTabs,
       ]) {
         expect(authRedirect(loading, location), isNull, reason: location);
         expect(authRedirect(failed, location), isNull, reason: location);
@@ -637,11 +796,19 @@ void main() {
       ]) {
         expect(authRedirect(signedIn, location), AppRoutes.home);
       }
-      expect(authRedirect(signedIn, AppRoutes.home), isNull);
+      for (final location in signedInTabs) {
+        expect(authRedirect(signedIn, location), isNull, reason: location);
+      }
     });
 
-    test('sends signed-out users from Home to Splash', () {
-      expect(authRedirect(signedOut, AppRoutes.home), AppRoutes.splash);
+    test('sends signed-out users from every signed-in tab to Splash', () {
+      for (final location in signedInTabs) {
+        expect(
+          authRedirect(signedOut, location),
+          AppRoutes.splash,
+          reason: location,
+        );
+      }
       for (final location in [
         AppRoutes.splash,
         AppRoutes.login,
@@ -657,7 +824,7 @@ void main() {
           AppRoutes.splash,
           AppRoutes.login,
           AppRoutes.signUp,
-          AppRoutes.home,
+          ...signedInTabs,
         ]) {
           final target = authRedirect(state, location);
           if (target != null) {
