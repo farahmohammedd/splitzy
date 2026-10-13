@@ -10,6 +10,8 @@ import 'package:splitzy/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:splitzy/injection_container.dart';
 
 import '../../../../helpers/fake_auth_repository.dart';
+import '../../../../helpers/fake_expense_repository.dart';
+import '../../../../helpers/fake_group_repository.dart';
 import '../../../../helpers/fake_error_reporter.dart';
 
 const SignUpDetails _details = (
@@ -30,6 +32,8 @@ void main() {
     container = ProviderContainer.test(
       overrides: InjectionContainer(
         authRepository: repository,
+        groupRepository: FakeGroupRepository(),
+        expenseRepository: FakeExpenseRepository(),
         errorReporter: reporter,
       ).overrides,
     );

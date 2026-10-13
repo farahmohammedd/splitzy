@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// Splitzy security rules. Deployed by pasting this file into the Firebase
+// console (Firestore Database → Rules → Publish). Data model:
+// .claude/rules/architecture.md → Firestore data model.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validNewGroup(data) {
+      return data.keys().hasOnly(['ownerId', 'name', 'members', 'createdAt'])
+        && data.ownerId == request.auth.uid
+        && data.name is string
+        && data.name.size() > 0 && data.name.size() <= 50
+        && data.members is list
+        && data.members.size() >= 2 && data.members.size() <= 50
+        && data.createdAt == request.time;
+    }
+
+    // Whether the signed-in user owns the group [groupId].
+    function ownsGroup(database, groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId))
+        .data.ownerId == request.auth.uid;
+    }
+
+    // Every field and limit the app writes. That the shares add up to the
+    // amount is checked by the app (rules cannot add up a map's values).
+    function validNewExpense(data, group) {
+      return data.keys().hasOnly(['description', 'amount', 'currency',
+          'paidBy', 'splitType', 'shares', 'createdAt'])
+        && data.description is string
+        && data.description.size() > 0 && data.description.size() <= 50
+        && data.amount is int
+        && data.amount >= 1 && data.amount <= 100000000
+        && data.currency == 'EGP'
+        && data.paidBy is string
+        && data.splitType in ['equal', 'custom']
+        && data.shares is map
+        && data.shares.size() == group.members.size()
+        && data.shares.keys().hasAll([data.paidBy])
+        && data.createdAt == request.time;
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if signedIn() && validNewGroup(request.resource.data);
+      // Editing and deleting groups are not built yet.
+      allow update, delete: if false;
+
+      match /expenses/{expenseId} {
+        allow read: if signedIn() && ownsGroup(database, groupId);
+        allow create: if signedIn() && ownsGroup(database, groupId)
+          && validNewExpense(request.resource.data,
+              get(/databases/$(database)/documents/groups/$(groupId)).data);
+        // Editing and deleting expenses are not built yet.
+        allow update, delete: if false;
+      }
+    }
+  }
+}

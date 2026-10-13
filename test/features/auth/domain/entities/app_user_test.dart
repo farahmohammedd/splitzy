@@ -24,4 +24,38 @@ void main() {
       expect(user.displayName, isNull);
     });
   });
+
+  group('AppUser.nameToShow', () {
+    test('is the display name when one is saved', () {
+      const user = AppUser(
+        id: 'u1',
+        email: 'sam@example.com',
+        displayName: ' Sam Lee ',
+      );
+
+      expect(user.nameToShow, 'Sam Lee');
+    });
+
+    test('falls back to the email before @ when no name is saved', () {
+      const user = AppUser(id: 'u1', email: 'sam.lee@example.com');
+
+      expect(user.nameToShow, 'sam.lee');
+    });
+
+    test('falls back to the email when the saved name is blank', () {
+      const user = AppUser(
+        id: 'u1',
+        email: 'sam@example.com',
+        displayName: '   ',
+      );
+
+      expect(user.nameToShow, 'sam');
+    });
+
+    test('is the whole email when it has no @', () {
+      const user = AppUser(id: 'u1', email: 'sam');
+
+      expect(user.nameToShow, 'sam');
+    });
+  });
 }

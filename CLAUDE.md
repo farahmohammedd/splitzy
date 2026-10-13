@@ -71,14 +71,14 @@ item is removed without renumbering the others.
 - **#3 Environment configuration** (before the first `.env` usage): how `.env` is
   provided given that it is git-ignored. (Where initialization lives is decided —
   see `.claude/rules/architecture.md` → App initialization.)
-- **#4 Firestore data model and security approach** (before the first collection).
 - **#6 Localization**: when (if ever) to introduce a localization package.
 - **#7 CI scope**: what the approved GitHub Actions CI runs, and when it is set up. (CI
   needs the git-ignored Firebase configuration files — see Firebase.)
 
-Decided: #1 Money (see Money and Expense Calculations); #5 Firebase configuration files
-are not committed (see Firebase); #8 design references in `docs/design/references/` are
-committed (see Assets).
+Decided: #1 Money (see Money and Expense Calculations); #4 Firestore data model and
+security (see `.claude/rules/architecture.md` → Firestore data model); #5 Firebase
+configuration files are not committed (see Firebase); #8 design references in
+`docs/design/references/` are committed (see Assets).
 
 ---
 
@@ -316,8 +316,11 @@ signing key registered for `com.splitzy.app`. `android/app/google-services.json`
 downloaded after that, so it contains a web OAuth client (`client_type: 3`). Every new
 signing key (e.g. a release key) needs its fingerprints registered and a refreshed file.
 
-Before the first Firestore collection is implemented, document the approved
-data model and security approach.
+The approved Firestore data model and security approach are documented in
+`.claude/rules/architecture.md` → Firestore data model. The security rules live in
+`firestore.rules` (committed). They are deployed by pasting the file into the Firebase
+console (Firestore Database → Rules → Publish); there is no Firebase CLI setup. Any
+change to `firestore.rules` must be republished, and the developer is told so.
 
 ---
 

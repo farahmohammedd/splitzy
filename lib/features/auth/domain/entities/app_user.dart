@@ -14,3 +14,14 @@ abstract class AppUser with _$AppUser {
     String? displayName,
   }) = _AppUser;
 }
+
+extension AppUserName on AppUser {
+  /// The name to show the user: their display name, or the part of their
+  /// email before `@` when no name was saved.
+  String get nameToShow {
+    final name = displayName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final at = email.indexOf('@');
+    return at > 0 ? email.substring(0, at) : email;
+  }
+}
