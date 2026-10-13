@@ -4,6 +4,7 @@ import 'package:splitzy/core/error/failures.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
 import 'package:splitzy/features/groups/presentation/screens/groups_screen.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_balance_text.dart';
 
 /// Connects [GroupsScreen] to [groupsProvider]: passes the owner's groups, or
 /// the loading or failed state, down to the screen, and loads them again on
@@ -14,11 +15,15 @@ class GroupsPage extends ConsumerWidget {
     required this.ownerId,
     required this.onNewGroup,
     required this.onOpenGroup,
+    this.balances = const {},
   });
 
   final String ownerId;
   final VoidCallback onNewGroup;
   final ValueChanged<Group> onOpenGroup;
+
+  /// The user's balance in each group, by group id (from the app root).
+  final Map<String, GroupBalance> balances;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,6 +36,7 @@ class GroupsPage extends ConsumerWidget {
       errorMessage: failed ? messageFor(groups.error) : null,
       onNewGroup: onNewGroup,
       onOpenGroup: onOpenGroup,
+      balances: balances,
       onRetry: () => ref.invalidate(groupsProvider(ownerId)),
     );
   }
