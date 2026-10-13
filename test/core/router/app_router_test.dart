@@ -12,6 +12,8 @@ import 'package:splitzy/core/router/home_shell.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/domain/failures/auth_failure.dart';
 import 'package:splitzy/features/auth/presentation/screens/login_screen.dart';
+import 'package:splitzy/features/expenses/presentation/screens/add_expense_screen.dart';
+import 'package:splitzy/features/expenses/presentation/screens/group_details_screen.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/domain/entities/member.dart';
 import 'package:splitzy/features/groups/presentation/screens/create_group_screen.dart';
@@ -24,16 +26,18 @@ import 'package:splitzy/features/splash/presentation/screens/splash_screen.dart'
 import 'package:splitzy/injection_container.dart';
 
 import '../../helpers/fake_auth_repository.dart';
+import '../../helpers/fake_expense_repository.dart';
 import '../../helpers/fake_group_repository.dart';
 import '../../helpers/fake_error_reporter.dart';
 
 /// Pumps the app with [repository] (signed out by default) as its auth
-/// backend and [groups] (empty by default) as its group storage, and returns
-/// the auth backend.
+/// backend, [groups] (empty by default) as its group storage and [expenses]
+/// as its expense storage, and returns the auth backend.
 Future<FakeAuthRepository> _pumpApp(
   WidgetTester tester, {
   FakeAuthRepository? repository,
   FakeGroupRepository? groups,
+  FakeExpenseRepository? expenses,
 }) async {
   // Screens scroll on small surfaces; a phone size keeps taps on-screen.
   tester.view.physicalSize = const Size(390, 844);
@@ -48,6 +52,7 @@ Future<FakeAuthRepository> _pumpApp(
       overrides: InjectionContainer(
         authRepository: auth,
         groupRepository: groupRepository,
+        expenseRepository: expenses ?? FakeExpenseRepository(),
         errorReporter: FakeErrorReporter(),
       ).overrides,
       child: const SplitzyApp(),
@@ -112,6 +117,14 @@ Group _group(String name, {String? ownerId}) {
     ],
     createdAt: DateTime(2026, 10, 12),
   );
+}
+
+/// Taps Save Expense.
+Future<void> _tapSave(WidgetTester tester) async {
+  final button = find.widgetWithText(FilledButton, 'Save Expense');
+  await tester.ensureVisible(button);
+  await tester.tap(button);
+  await tester.pumpAndSettle();
 }
 
 /// Taps the Create Group button (the title has the same text).
@@ -633,6 +646,8 @@ void main() {
           AppRoutes.activity,
           AppRoutes.profile,
           AppRoutes.newGroup,
+          AppRoutes.addExpense,
+          AppRoutes.groupDetails('g1'),
         ]) {
           _router(tester).go(location);
           await tester.pumpAndSettle();
@@ -647,6 +662,7 @@ void main() {
       Future<void> pumpSignedIn(
         WidgetTester tester, {
         FakeGroupRepository? groups,
+        FakeExpenseRepository? expenses,
       }) async {
         await _pumpApp(
           tester,
@@ -654,6 +670,7 @@ void main() {
             signedInUser: FakeAuthRepository.defaultUser,
           ),
           groups: groups,
+          expenses: expenses,
         );
         await _finishLoading(tester);
       }
@@ -787,20 +804,98 @@ void main() {
         );
       });
 
-      testWidgets("Home's Add Expense says Coming soon", (tester) async {
+      testWidgets("Home's Add Expense opens Add Expense over the tabs", (
+        tester,
+      ) async {
         await pumpSignedIn(tester);
 
         await tester.tap(find.text('Add Expense'));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
-        expect(
-          find.descendant(
-            of: find.byType(SnackBar),
-            matching: find.text('Coming soon'),
-          ),
-          findsOneWidget,
+        expect(_location(tester), AppRoutes.addExpense);
+        expect(find.byType(AddExpenseScreen), findsOneWidget);
+        // The bottom bar is hidden while adding an expense.
+        expect(find.byType(HomeShell), findsNothing);
+      });
+
+      testWidgets('Back on Add Expense returns to the tab it was opened '
+          'from', (tester) async {
+        await pumpSignedIn(tester);
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+
+        expect(_location(tester), AppRoutes.groups);
+      });
+
+      testWidgets('saving an expense stores it in the chosen group and '
+          'returns', (tester) async {
+        final expenses = FakeExpenseRepository();
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(groups: [_group('Trip to Dahab')]),
+          expenses: expenses,
         );
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(_field('e.g. Dinner'), 'Dinner');
+        await tester.enterText(_field('0.00'), '600');
+        await _tapSave(tester);
+
+        final call = expenses.addCalls.single;
+        expect(call.groupId, 'Trip to Dahab');
+        expect(call.description, 'Dinner');
+        expect(call.amount, 60000);
+        expect(call.paidBy, FakeAuthRepository.defaultUser.id);
+        expect(call.shares, {
+          FakeAuthRepository.defaultUser.id: 30000,
+          'sara': 30000,
+        });
         expect(_location(tester), AppRoutes.home);
+      });
+
+      testWidgets('a failed save stays on Add Expense with its message', (
+        tester,
+      ) async {
+        final expenses = FakeExpenseRepository()
+          ..failNextWith(const NetworkFailure());
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(groups: [_group('Trip')]),
+          expenses: expenses,
+        );
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(_field('e.g. Dinner'), 'Dinner');
+        await tester.enterText(_field('0.00'), '600');
+        await _tapSave(tester);
+
+        expect(_location(tester), AppRoutes.addExpense);
+        expect(find.text(const NetworkFailure().message), findsOneWidget);
+      });
+
+      testWidgets('without groups, Add Expense leads to New Group; the new '
+          'group is then ready to use', (tester) async {
+        await pumpSignedIn(tester);
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+        expect(find.text('Create a group first'), findsOneWidget);
+
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+        await tester.enterText(_field('e.g. Trip to Dahab'), 'Trip to Dahab');
+        await tester.enterText(_field('Enter member name'), 'Sara');
+        await _tapCreateGroup(tester);
+
+        expect(_location(tester), AppRoutes.addExpense);
+        expect(find.text('Trip to Dahab'), findsOneWidget);
+        expect(find.widgetWithText(ChoiceChip, 'Sara'), findsOneWidget);
       });
 
       testWidgets("Home's New Group opens Create Group over the tabs", (
@@ -882,20 +977,121 @@ void main() {
         expect(_location(tester), AppRoutes.profile);
       });
 
-      testWidgets('the Add button says Coming soon', (tester) async {
+      testWidgets("a group card on the Groups tab opens the group's page", (
+        tester,
+      ) async {
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(groups: [_group('Trip to Dahab')]),
+        );
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Trip to Dahab'));
+        await tester.pumpAndSettle();
+
+        expect(_location(tester), AppRoutes.groupDetails('Trip to Dahab'));
+        expect(find.byType(GroupDetailsScreen), findsOneWidget);
+        expect(find.byType(HomeShell), findsNothing);
+
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        expect(_location(tester), AppRoutes.groups);
+      });
+
+      testWidgets("a group card on Home opens the group's page", (
+        tester,
+      ) async {
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(groups: [_group('Trip to Dahab')]),
+        );
+
+        await _tapText(tester, 'Trip to Dahab');
+
+        expect(_location(tester), AppRoutes.groupDetails('Trip to Dahab'));
+        expect(find.byType(GroupDetailsScreen), findsOneWidget);
+      });
+
+      testWidgets("Add Expense on a group's page adds to that group and "
+          'returns to the page, which shows the expense', (tester) async {
+        final expenses = FakeExpenseRepository();
+        addTearDown(expenses.dispose);
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(
+            groups: [_group('Apartment'), _group('Trip to Dahab')],
+          ),
+          expenses: expenses,
+        );
+        _router(tester).push(AppRoutes.groupDetails('Trip to Dahab'));
+        await tester.pumpAndSettle();
+        expect(find.text('No expenses yet'), findsOneWidget);
+
+        await _tapText(tester, 'Add Expense');
+        // The page's group is chosen, not the newest one.
+        expect(find.text('Trip to Dahab'), findsOneWidget);
+        expect(find.text('Apartment'), findsNothing);
+        await tester.enterText(_field('e.g. Dinner'), 'Dinner');
+        await tester.enterText(_field('0.00'), '600');
+        await _tapSave(tester);
+
+        expect(expenses.addCalls.single.groupId, 'Trip to Dahab');
+        expect(_location(tester), AppRoutes.groupDetails('Trip to Dahab'));
+        expect(find.text('Dinner'), findsOneWidget);
+        expect(find.text('EGP 600'), findsWidgets);
+      });
+
+      testWidgets("Home's balance card adds up the user's balance across "
+          'groups and updates after an expense', (tester) async {
+        final expenses = FakeExpenseRepository();
+        addTearDown(expenses.dispose);
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(
+            groups: [_group('Trip to Dahab'), _group('Apartment')],
+          ),
+          expenses: expenses,
+        );
+        expect(find.text('No expenses yet'), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+        await tester.enterText(_field('e.g. Dinner'), 'Dinner');
+        await tester.enterText(_field('0.00'), '600');
+        await _tapSave(tester);
+
+        // Paid 600, share 300 (two members): owed 300.
+        expect(_location(tester), AppRoutes.home);
+        expect(find.text('+ EGP 300'), findsOneWidget);
+        expect(find.text('No expenses yet'), findsNothing);
+      });
+
+      testWidgets("a group that is not the user's shows a message", (
+        tester,
+      ) async {
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(
+            groups: [_group('Not mine', ownerId: 'someone-else')],
+          ),
+        );
+
+        _router(tester).push(AppRoutes.groupDetails('Not mine'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('This group is not available.'), findsOneWidget);
+        expect(find.byType(GroupDetailsScreen), findsNothing);
+      });
+
+      testWidgets('the Add button opens Add Expense', (tester) async {
         await pumpSignedIn(tester);
 
         await tester.tap(find.byTooltip('Add expense'));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
-        expect(
-          find.descendant(
-            of: find.byType(SnackBar),
-            matching: find.text('Coming soon'),
-          ),
-          findsOneWidget,
-        );
-        expect(_location(tester), AppRoutes.home);
+        expect(_location(tester), AppRoutes.addExpense);
+        expect(find.byType(AddExpenseScreen), findsOneWidget);
       });
     });
 
@@ -935,12 +1131,14 @@ void main() {
     const signedIn = AsyncData<AppUser?>(FakeAuthRepository.defaultUser);
     const signedOut = AsyncData<AppUser?>(null);
     const loading = AsyncLoading<AppUser?>();
-    const signedInTabs = [
+    final signedInTabs = [
       AppRoutes.home,
       AppRoutes.groups,
       AppRoutes.activity,
       AppRoutes.profile,
       AppRoutes.newGroup,
+      AppRoutes.addExpense,
+      AppRoutes.groupDetails('g1'),
     ];
 
     test('never redirects away from Launch', () {

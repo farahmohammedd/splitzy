@@ -83,20 +83,4 @@ void main() {
       );
     });
   });
-
-  group('TimestampConverter', () {
-    const converter = TimestampConverter();
-
-    test('converts a Timestamp to a DateTime and back', () {
-      final timestamp = Timestamp.fromDate(_created);
-
-      expect(converter.fromJson(timestamp)?.isAtSameMomentAs(_created), isTrue);
-      expect(converter.toJson(_created), timestamp);
-    });
-
-    test('keeps null as null', () {
-      expect(converter.fromJson(null), isNull);
-      expect(converter.toJson(null), isNull);
-    });
-  });
 }

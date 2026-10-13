@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:splitzy/core/firestore/timestamp_converter.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/domain/entities/member.dart';
 
@@ -49,17 +49,4 @@ abstract class MemberDto with _$MemberDto {
       _$MemberDtoFromJson(json);
 
   Member toEntity() => Member(id: id, name: name);
-}
-
-/// Converts Firestore's [Timestamp] to [DateTime] and back. `null` stays
-/// `null` (a pending server timestamp reads as `null`).
-class TimestampConverter implements JsonConverter<DateTime?, Object?> {
-  const TimestampConverter();
-
-  @override
-  DateTime? fromJson(Object? json) => (json as Timestamp?)?.toDate();
-
-  @override
-  Object? toJson(DateTime? date) =>
-      date == null ? null : Timestamp.fromDate(date);
 }

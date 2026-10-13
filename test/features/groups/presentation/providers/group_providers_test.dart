@@ -7,6 +7,7 @@ import 'package:splitzy/injection_container.dart';
 
 import '../../../../helpers/fake_auth_repository.dart';
 import '../../../../helpers/fake_error_reporter.dart';
+import '../../../../helpers/fake_expense_repository.dart';
 import '../../../../helpers/fake_group_repository.dart';
 
 Group _group(String id, String ownerId) => Group(
@@ -46,6 +47,7 @@ void main() {
           overrides: InjectionContainer(
             authRepository: auth,
             groupRepository: repository,
+            expenseRepository: FakeExpenseRepository(),
             errorReporter: FakeErrorReporter(),
           ).overrides,
         );

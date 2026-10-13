@@ -20,6 +20,7 @@ Group _group(String name) => Group(
 class _Calls {
   int newGroup = 0;
   int retry = 0;
+  final opened = <Group>[];
 }
 
 Future<_Calls> _pumpScreen(
@@ -35,6 +36,7 @@ Future<_Calls> _pumpScreen(
         groups: groups,
         errorMessage: errorMessage,
         onNewGroup: () => calls.newGroup++,
+        onOpenGroup: calls.opened.add,
         onRetry: () => calls.retry++,
       ),
     ),
@@ -97,6 +99,18 @@ void main() {
       await tester.tap(find.text('Try again'));
 
       expect(calls.retry, 1);
+    });
+
+    testWidgets('reports the group whose card was tapped', (tester) async {
+      final trip = _group('Trip to Dahab');
+      final calls = await _pumpScreen(
+        tester,
+        groups: [trip, _group('Apartment')],
+      );
+
+      await tester.tap(find.text('Trip to Dahab'));
+
+      expect(calls.opened, [trip]);
     });
 
     testWidgets('reports New Group', (tester) async {

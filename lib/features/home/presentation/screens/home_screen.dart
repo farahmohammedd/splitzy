@@ -10,9 +10,9 @@ import 'package:splitzy/features/home/presentation/widgets/quick_actions.dart';
 /// The signed-in home screen: greeting, total balance, quick actions, the
 /// user's groups and recent activity (empty until that feature exists).
 ///
-/// Presentation only: [name] and the groups content come from the caller and
-/// every action is reported through a callback. Log out lives on the Profile
-/// tab.
+/// Presentation only: [name], the balance and the groups content come from
+/// the caller and every action is reported through a callback. Log out lives
+/// on the Profile tab.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
@@ -21,6 +21,9 @@ class HomeScreen extends StatelessWidget {
     required this.onNewGroup,
     this.groups,
     this.onSeeAllGroups,
+    this.balance,
+    this.balanceLoading = false,
+    this.balanceFailed = false,
   });
 
   /// The decorative circle's diameter, as a fraction of the screen width,
@@ -41,6 +44,15 @@ class HomeScreen extends StatelessWidget {
 
   /// Shows See all next to Your Groups when set.
   final VoidCallback? onSeeAllGroups;
+
+  /// The user's balance across groups; `null` when there are no expenses.
+  final HomeBalance? balance;
+
+  /// The balance is still loading.
+  final bool balanceLoading;
+
+  /// The balance could not be loaded.
+  final bool balanceFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +114,11 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             HomeHeader(name: name),
                             const SizedBox(height: AppSpacing.lg),
-                            const BalanceCard(),
+                            BalanceCard(
+                              balance: balance,
+                              isLoading: balanceLoading,
+                              loadFailed: balanceFailed,
+                            ),
                             const SizedBox(height: AppSpacing.lg),
                             QuickActions(
                               onAddExpense: onAddExpense,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
-import 'package:splitzy/features/groups/presentation/widgets/member_avatar.dart';
+import 'package:splitzy/core/widgets/member_avatar.dart';
 
 /// A group's initial in a rounded square, as in the design reference. Colors
 /// cycle by [index] (the group's position in its list), like [MemberAvatar].

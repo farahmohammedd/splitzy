@@ -9,11 +9,14 @@ import 'package:splitzy/core/error/crashlytics_error_reporter.dart';
 import 'package:splitzy/core/error/error_reporter_provider.dart';
 import 'package:splitzy/features/auth/data/repositories/firebase_auth_repository.dart';
 import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart';
+import 'package:splitzy/features/expenses/data/repositories/firestore_expense_repository.dart';
+import 'package:splitzy/features/expenses/presentation/providers/expense_providers.dart';
 import 'package:splitzy/features/groups/data/repositories/firestore_group_repository.dart';
 import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
 import 'package:splitzy/injection_container.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_expense_repository.dart';
 import 'helpers/fake_group_repository.dart';
 import 'helpers/fake_error_reporter.dart';
 
@@ -32,9 +35,11 @@ void main() {
       addTearDown(repository.dispose);
       final groupRepository = FakeGroupRepository();
       addTearDown(groupRepository.dispose);
+      final expenseRepository = FakeExpenseRepository();
       final injection = InjectionContainer(
         authRepository: repository,
         groupRepository: groupRepository,
+        expenseRepository: expenseRepository,
         errorReporter: FakeErrorReporter(),
       );
       final container = ProviderContainer.test(overrides: injection.overrides);
@@ -44,6 +49,14 @@ void main() {
       expect(
         container.read(createGroupUseCaseProvider),
         same(injection.createGroupUseCase),
+      );
+      expect(
+        container.read(expenseRepositoryProvider),
+        same(expenseRepository),
+      );
+      expect(
+        container.read(addExpenseUseCaseProvider),
+        same(injection.addExpenseUseCase),
       );
       expect(
         container.read(signInUseCaseProvider),
@@ -65,6 +78,7 @@ void main() {
 
       expect(injection.authRepository, isA<FirebaseAuthRepository>());
       expect(injection.groupRepository, isA<FirestoreGroupRepository>());
+      expect(injection.expenseRepository, isA<FirestoreExpenseRepository>());
       expect(injection.errorReporter, isA<CrashlyticsErrorReporter>());
     });
 
@@ -76,6 +90,7 @@ void main() {
         overrides: InjectionContainer(
           authRepository: repository,
           groupRepository: FakeGroupRepository(),
+          expenseRepository: FakeExpenseRepository(),
           errorReporter: reporter,
         ).overrides,
       );
@@ -89,6 +104,7 @@ void main() {
       final injection = InjectionContainer(
         authRepository: repository,
         groupRepository: FakeGroupRepository(),
+        expenseRepository: FakeExpenseRepository(),
         errorReporter: FakeErrorReporter(),
       );
 

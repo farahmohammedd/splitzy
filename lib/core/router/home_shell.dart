@@ -7,6 +7,11 @@ import 'package:splitzy/core/theme/app_brand_colors.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart';
+import 'package:splitzy/features/expenses/domain/money/balances.dart';
+import 'package:splitzy/features/expenses/presentation/providers/expense_providers.dart';
+import 'package:splitzy/features/expenses/presentation/screens/add_expense_page.dart';
+import 'package:splitzy/features/expenses/presentation/screens/group_details_page.dart';
+import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
 import 'package:splitzy/features/groups/presentation/screens/create_group_page.dart';
 import 'package:splitzy/features/groups/presentation/screens/groups_page.dart';
@@ -46,8 +51,7 @@ class HomeShell extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       floatingActionButton: FloatingActionButton(
-        // TEMPORARY: replaced by the Add Expense flow in the Expenses phase.
-        onPressed: () => _showComingSoon(context),
+        onPressed: () => context.push(AppRoutes.addExpense),
         tooltip: 'Add expense',
         shape: const CircleBorder(),
         backgroundColor: context.brandColors.primaryDark,
@@ -62,14 +66,6 @@ class HomeShell extends StatelessWidget {
       ),
     );
   }
-}
-
-/// TEMPORARY: tells the user a feature is not built yet. Removed once every
-/// button and tab that uses it leads to its real feature.
-void _showComingSoon(BuildContext context) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(content: Text('Coming soon')));
 }
 
 class _Tab {
@@ -174,8 +170,8 @@ class _BottomBarItem extends StatelessWidget {
 }
 
 /// Connects [HomeScreen] to the features it shows. The app root may connect
-/// features: Home shows the signed-in user's name and their groups, and will
-/// gather balances from their own feature.
+/// features: Home shows the signed-in user's name, their groups, and their
+/// balance across those groups' expenses.
 class HomeRoute extends ConsumerWidget {
   const HomeRoute({super.key});
 
@@ -189,10 +185,35 @@ class HomeRoute extends ConsumerWidget {
     final loaded = failed ? null : groups?.value;
     final hasGroups = loaded != null && loaded.isNotEmpty;
 
+    // The user's balance in each group, from that group's expenses.
+    var balanceLoading = groups == null || (loaded == null && !failed);
+    var balanceFailed = failed;
+    var hasExpenses = false;
+    final groupBalances = <int>[];
+    if (user != null) {
+      for (final group in loaded ?? const <Group>[]) {
+        final expenses = ref.watch(groupExpensesProvider(group.id));
+        final list = expenses.value;
+        if (expenses.hasError && !expenses.isLoading) {
+          balanceFailed = true;
+        } else if (list == null) {
+          balanceLoading = true;
+        } else {
+          hasExpenses = hasExpenses || list.isNotEmpty;
+          final memberIds = [for (final member in group.members) member.id];
+          groupBalances.add(balancesOf(list, memberIds)[user.id] ?? 0);
+        }
+      }
+    }
+    final overall = overallBalance(groupBalances);
+
     return HomeScreen(
       name: user?.nameToShow ?? '',
-      // TEMPORARY: replaced by the Add Expense flow in the Expenses phase.
-      onAddExpense: () => _showComingSoon(context),
+      // No expenses yet: the card shows its own empty state.
+      balance: hasExpenses ? (owed: overall.owed, owe: overall.owe) : null,
+      balanceLoading: balanceLoading && !balanceFailed,
+      balanceFailed: balanceFailed,
+      onAddExpense: () => context.push(AppRoutes.addExpense),
       onNewGroup: () => context.push(AppRoutes.newGroup),
       // No groups yet: Home shows its own empty state.
       groups: loaded != null && !hasGroups
@@ -200,6 +221,8 @@ class HomeRoute extends ConsumerWidget {
           : GroupHomeCards(
               groups: loaded,
               errorMessage: failed ? messageFor(groups.error) : null,
+              onOpenGroup: (group) =>
+                  context.push(AppRoutes.groupDetails(group.id)),
             ),
       onSeeAllGroups: hasGroups ? () => context.go(AppRoutes.groups) : null,
     );
@@ -207,7 +230,7 @@ class HomeRoute extends ConsumerWidget {
 }
 
 /// Connects [GroupsPage] to the signed-in user (the app root may connect
-/// features) and opens New Group.
+/// features) and opens New Group and each group's page.
 class GroupsRoute extends ConsumerWidget {
   const GroupsRoute({super.key});
 
@@ -220,6 +243,7 @@ class GroupsRoute extends ConsumerWidget {
     return GroupsPage(
       ownerId: user.id,
       onNewGroup: () => context.push(AppRoutes.newGroup),
+      onOpenGroup: (group) => context.push(AppRoutes.groupDetails(group.id)),
     );
   }
 }
@@ -251,6 +275,100 @@ class NewGroupRoute extends ConsumerWidget {
     } else {
       context.go(AppRoutes.groups);
     }
+  }
+}
+
+/// Connects [AddExpensePage] to the signed-in user and their groups (the app
+/// root may connect features), and closes it on Back or once the expense is
+/// saved.
+class AddExpenseRoute extends ConsumerWidget {
+  const AddExpenseRoute({super.key, this.initialGroupId});
+
+  /// The group chosen at first (e.g. when opened from a group's page).
+  final String? initialGroupId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    // Signed out: the redirect is about to leave this screen.
+    if (user == null) return const SizedBox.shrink();
+    final groups = ref.watch(groupsProvider(user.id));
+    // While loading again after a failure, the screen shows loading.
+    final failed = groups.hasError && !groups.isLoading;
+
+    return AddExpensePage(
+      groups: failed ? null : groups.value,
+      groupsErrorMessage: failed ? messageFor(groups.error) : null,
+      ownerId: user.id,
+      initialGroupId: initialGroupId,
+      onBack: () => _close(context),
+      onSaved: () => _close(context),
+      onNewGroup: () => context.push(AppRoutes.newGroup),
+    );
+  }
+
+  /// Returns to the screen underneath, or to Home when there is none (e.g.
+  /// the screen was opened directly).
+  static void _close(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.home);
+    }
+  }
+}
+
+/// Connects [GroupDetailsPage] to the signed-in user and the group [groupId]
+/// from their groups (the app root may connect features). Shows loading
+/// until the group is known, and a message when it is not one of theirs.
+class GroupDetailsRoute extends ConsumerWidget {
+  const GroupDetailsRoute({super.key, required this.groupId});
+
+  final String groupId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    // Signed out: the redirect is about to leave this screen.
+    if (user == null) return const SizedBox.shrink();
+    final groups = ref.watch(groupsProvider(user.id));
+    Group? group;
+    for (final candidate in groups.value ?? const <Group>[]) {
+      if (candidate.id == groupId) group = candidate;
+    }
+
+    if (group == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: groups.isLoading
+              ? const CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    groups.hasError
+                        ? messageFor(groups.error)
+                        : 'This group is not available.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+        ),
+      );
+    }
+
+    return GroupDetailsPage(
+      group: group,
+      ownerId: user.id,
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.groups);
+        }
+      },
+      onAddExpense: () => context.push(AppRoutes.addExpenseTo(groupId)),
+    );
   }
 }
 

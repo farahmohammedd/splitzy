@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:splitzy/core/theme/app_brand_colors.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
+import 'package:splitzy/core/widgets/member_avatar.dart';
 import 'package:splitzy/core/widgets/primary_arrow_button.dart';
 import 'package:splitzy/features/groups/domain/validation/group_validation.dart';
-import 'package:splitzy/features/groups/presentation/widgets/member_avatar.dart';
 
 /// The Create Group form: a group name, then members added one by one from a
 /// single field. The owner is a member automatically and is not listed.

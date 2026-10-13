@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:splitzy/core/format/date_format.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/presentation/widgets/group_initial_tile.dart';
@@ -22,7 +23,7 @@ class GroupListCard extends StatelessWidget {
   /// The group's position in the list; picks the tile's color.
   final int index;
 
-  /// Opens the group. `null` until the group details screen exists.
+  /// Opens the group's page.
   final VoidCallback? onTap;
 
   @override
@@ -111,23 +112,6 @@ class GroupListCard extends StatelessWidget {
 /// "1 member" or "N members".
 String membersLabel(int count) => count == 1 ? '1 member' : '$count members';
 
-const _months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 /// "Created Oct 12", in the device's time zone (the year is not shown).
-String createdLabel(DateTime createdAt) {
-  final local = createdAt.toLocal();
-  return 'Created ${_months[local.month - 1]} ${local.day}';
-}
+String createdLabel(DateTime createdAt) =>
+    'Created ${formatMonthDay(createdAt)}';

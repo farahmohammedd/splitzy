@@ -15,6 +15,7 @@ class GroupsScreen extends StatelessWidget {
     super.key,
     required this.groups,
     required this.onNewGroup,
+    required this.onOpenGroup,
     required this.onRetry,
     this.errorMessage,
   });
@@ -29,6 +30,9 @@ class GroupsScreen extends StatelessWidget {
   final List<Group>? groups;
   final String? errorMessage;
   final VoidCallback onNewGroup;
+
+  /// Opens a group's page.
+  final ValueChanged<Group> onOpenGroup;
 
   /// Loads the groups again after a failure.
   final VoidCallback onRetry;
@@ -71,7 +75,11 @@ class GroupsScreen extends StatelessWidget {
       body = SliverList.separated(
         itemCount: groups.length,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (_, i) => GroupListCard(group: groups[i], index: i),
+        itemBuilder: (_, i) => GroupListCard(
+          group: groups[i],
+          index: i,
+          onTap: () => onOpenGroup(groups[i]),
+        ),
       );
     }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:splitzy/core/theme/app_theme.dart';
 import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
+import 'package:splitzy/features/home/presentation/widgets/balance_card.dart';
 
 /// Records which callbacks the screen invoked.
 class _Calls {
@@ -72,6 +73,93 @@ void main() {
       expect(find.text('No activity yet'), findsOneWidget);
       expect(find.text('See all'), findsNothing);
       expect(find.text('View all'), findsNothing);
+    });
+
+    group('balance card', () {
+      Future<void> pumpBalance(
+        WidgetTester tester, {
+        HomeBalance? balance,
+        bool loading = false,
+        bool failed = false,
+      }) {
+        return tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: HomeScreen(
+              name: 'Sam',
+              onAddExpense: () {},
+              onNewGroup: () {},
+              balance: balance,
+              balanceLoading: loading,
+              balanceFailed: failed,
+            ),
+          ),
+        );
+      }
+
+      testWidgets('shows what you are owed, what you owe and the total', (
+        tester,
+      ) async {
+        await pumpBalance(tester, balance: (owed: 50500, owe: 15000));
+
+        expect(find.text('Total balance'), findsOneWidget);
+        expect(find.text('+ EGP 355'), findsOneWidget);
+        expect(
+          find.text("You're all good — friends owe you more 🎉"),
+          findsOneWidget,
+        );
+        expect(find.text('You are owed'), findsOneWidget);
+        expect(find.text('EGP 505'), findsOneWidget);
+        expect(find.text('You owe'), findsOneWidget);
+        expect(find.text('EGP 150'), findsOneWidget);
+        expect(find.text('No expenses yet'), findsNothing);
+      });
+
+      testWidgets('shows a negative total when you owe more', (tester) async {
+        await pumpBalance(tester, balance: (owed: 2000, owe: 17000));
+
+        expect(find.text('- EGP 150'), findsOneWidget);
+        expect(
+          find.text("You owe a bit more than you're owed."),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says you are all settled at zero', (tester) async {
+        await pumpBalance(tester, balance: (owed: 0, owe: 0));
+
+        expect(find.text('EGP 0'), findsNWidgets(3));
+        expect(find.text("You're all settled."), findsOneWidget);
+      });
+
+      testWidgets('shows progress, with no amounts, while loading', (
+        tester,
+      ) async {
+        await pumpBalance(tester, loading: true);
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.textContaining('EGP'), findsNothing);
+        expect(find.text('No expenses yet'), findsNothing);
+      });
+
+      testWidgets('says when the balance could not be loaded', (tester) async {
+        await pumpBalance(tester, failed: true);
+
+        expect(find.text("Couldn't load your balance."), findsOneWidget);
+        expect(find.textContaining('EGP'), findsNothing);
+      });
+
+      testWidgets('fits a small phone with 2x text scaling', (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await pumpBalance(tester, balance: (owed: 12345678, owe: 9876543));
+
+        expect(tester.takeException(), isNull);
+      });
     });
 
     testWidgets('shows the groups content in place of the empty state, with '

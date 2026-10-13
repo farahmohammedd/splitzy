@@ -101,10 +101,20 @@ GoRouter appRouter(Ref ref) {
           ),
         ],
       ),
-      // Outside the shell, so it covers the tabs and hides the bottom bar.
+      // Outside the shell, so they cover the tabs and hide the bottom bar.
       GoRoute(
         path: AppRoutes.newGroup,
         builder: (context, state) => const NewGroupRoute(),
+      ),
+      GoRoute(
+        path: AppRoutes.addExpense,
+        builder: (context, state) =>
+            AddExpenseRoute(initialGroupId: state.uri.queryParameters['group']),
+      ),
+      GoRoute(
+        path: AppRoutes.groupDetailsPattern,
+        builder: (context, state) =>
+            GroupDetailsRoute(groupId: state.pathParameters['groupId'] ?? ''),
       ),
     ],
   );
@@ -128,7 +138,14 @@ const _signedInLocations = {
   AppRoutes.activity,
   AppRoutes.profile,
   AppRoutes.newGroup,
+  AppRoutes.addExpense,
 };
+
+/// Whether [location] is a signed-in screen: one of [_signedInLocations] or
+/// a group's page.
+bool _isSignedInLocation(String location) =>
+    _signedInLocations.contains(location) ||
+    location.startsWith(AppRoutes.groupDetails(''));
 
 /// Where to send the user from [location], or `null` to stay.
 ///
@@ -145,7 +162,7 @@ String? authRedirect(AsyncValue<AppUser?> authState, String location) {
 
   final signedIn = authState.value != null;
   if (signedIn && _signedOutLocations.contains(location)) return AppRoutes.home;
-  if (!signedIn && _signedInLocations.contains(location)) {
+  if (!signedIn && _isSignedInLocation(location)) {
     return AppRoutes.splash;
   }
   return null;

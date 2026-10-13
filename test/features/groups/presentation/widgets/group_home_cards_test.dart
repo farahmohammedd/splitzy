@@ -20,12 +20,17 @@ Future<void> _pump(
   WidgetTester tester, {
   List<Group>? groups,
   String? errorMessage,
+  ValueChanged<Group>? onOpenGroup,
 }) {
   return tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light,
       home: Scaffold(
-        body: GroupHomeCards(groups: groups, errorMessage: errorMessage),
+        body: GroupHomeCards(
+          groups: groups,
+          errorMessage: errorMessage,
+          onOpenGroup: onOpenGroup ?? (_) {},
+        ),
       ),
     ),
   );
@@ -80,6 +85,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Group 5').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('reports the group whose card was tapped', (tester) async {
+      final apartment = _group('2', 'Apartment', ['Farah', 'Mona']);
+      final opened = <Group>[];
+      await _pump(
+        tester,
+        groups: [
+          _group('1', 'Trip', ['Farah', 'Sara']),
+          apartment,
+        ],
+        onOpenGroup: opened.add,
+      );
+
+      await tester.tap(find.text('Apartment'));
+
+      expect(opened, [apartment]);
     });
 
     testWidgets('shows loading while the groups are unknown', (tester) async {

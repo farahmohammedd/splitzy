@@ -22,6 +22,10 @@ lib/
     error/                  # shared Failure / AppException bases, ErrorReporter
                             # (+ Crashlytics implementation), runGuarded,
                             # global error handlers
+    firestore/              # Firestore helpers shared by data layers
+                            # (TimestampConverter)
+    format/                 # non-money display formatting (formatMonthDay)
+    money/                  # money display (formatEgp), shared by features
     router/                 # the app's single GoRouter and its route paths
     theme/                  # design system (colors, text styles, spacing, theme)
     widgets/                # widgets shared by multiple features
@@ -32,6 +36,7 @@ lib/
         repositories/       # repository interfaces
         usecases/           # one use case per file
         failures/           # the feature's sealed failure type (e.g. AuthFailure)
+        money/              # money calculations (e.g. splitEqually), pure Dart
         validation/         # input rules shared by use cases and forms
       data/
         datasources/        # one thin wrapper per SDK/service (Firebase, Hive)
@@ -269,8 +274,13 @@ groups/{groupId}
   never stored.
 - **Security** (`firestore.rules`): signed-in users read and create only groups they own
   (`ownerId == request.auth.uid`); a new group must have exactly the fields above, a
-  1–50 character name, 2–50 members and `createdAt == request.time`. Updating and
-  deleting groups, and all expense access, are denied until those features are built.
+  1–50 character name, 2–50 members and `createdAt == request.time`. Only a group's
+  owner reads and adds its expenses; a new expense must have exactly the fields above, a
+  1–50 character description, an amount of 1–100,000,000 piastres, currency `EGP`, split
+  type `equal` or `custom`, one share per group member (the payer included) and
+  `createdAt == request.time`. That the shares add up to the amount is enforced by the
+  app (`AddExpenseUseCase`): rules cannot add up a map's values. Updating and deleting
+  groups and expenses are denied until those features are built.
 - **Queries must match the rules**: every group query filters on
   `ownerId == <signed-in uid>`; otherwise Firestore rejects the whole query.
 

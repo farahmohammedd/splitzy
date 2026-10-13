@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:splitzy/core/widgets/member_avatar.dart';
 import 'package:splitzy/features/groups/domain/entities/member.dart';
-import 'package:splitzy/features/groups/presentation/widgets/member_avatar.dart';
 
 /// A group's first [maxVisible] members as overlapping avatars, then "+N" for
 /// the rest, as in the design reference. The first member is the owner.

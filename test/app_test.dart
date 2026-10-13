@@ -8,6 +8,7 @@ import 'package:splitzy/core/theme/app_colors.dart';
 import 'package:splitzy/injection_container.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_expense_repository.dart';
 import 'helpers/fake_group_repository.dart';
 import 'helpers/fake_error_reporter.dart';
 
@@ -21,6 +22,7 @@ void main() {
           overrides: InjectionContainer(
             authRepository: repository,
             groupRepository: FakeGroupRepository(),
+            expenseRepository: FakeExpenseRepository(),
             errorReporter: FakeErrorReporter(),
           ).overrides,
           child: const SplitzyApp(),

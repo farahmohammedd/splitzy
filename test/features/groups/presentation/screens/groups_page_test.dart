@@ -53,7 +53,11 @@ Future<_ControlledGroupRepository> _pumpPage(WidgetTester tester) async {
       retry: (_, _) => null,
       child: MaterialApp(
         theme: AppTheme.light,
-        home: GroupsPage(ownerId: 'owner', onNewGroup: () {}),
+        home: GroupsPage(
+          ownerId: 'owner',
+          onNewGroup: () {},
+          onOpenGroup: (_) {},
+        ),
       ),
     ),
   );
