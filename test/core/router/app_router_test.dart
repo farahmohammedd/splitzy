@@ -21,6 +21,7 @@ import 'package:splitzy/features/groups/presentation/screens/groups_screen.dart'
 import 'package:splitzy/features/auth/presentation/widgets/auth_error_text.dart';
 import 'package:splitzy/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
+import 'package:splitzy/features/home/presentation/widgets/balance_card.dart';
 import 'package:splitzy/features/splash/presentation/screens/launch_screen.dart';
 import 'package:splitzy/features/splash/presentation/screens/splash_screen.dart';
 import 'package:splitzy/injection_container.dart';
@@ -1053,7 +1054,11 @@ void main() {
           ),
           expenses: expenses,
         );
-        expect(find.text('No expenses yet'), findsOneWidget);
+        Finder inCard(String text) => find.descendant(
+          of: find.byType(BalanceCard),
+          matching: find.text(text),
+        );
+        expect(inCard('No expenses yet'), findsOneWidget);
 
         await tester.tap(find.byTooltip('Add expense'));
         await tester.pumpAndSettle();
@@ -1063,8 +1068,37 @@ void main() {
 
         // Paid 600, share 300 (two members): owed 300.
         expect(_location(tester), AppRoutes.home);
-        expect(find.text('+ EGP 300'), findsOneWidget);
-        expect(find.text('No expenses yet'), findsNothing);
+        expect(inCard('+ EGP 300'), findsOneWidget);
+        expect(inCard('No expenses yet'), findsNothing);
+      });
+
+      testWidgets("group cards show the user's balance in each group", (
+        tester,
+      ) async {
+        final expenses = FakeExpenseRepository();
+        addTearDown(expenses.dispose);
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(
+            groups: [_group('Trip to Dahab'), _group('Apartment')],
+          ),
+          expenses: expenses,
+        );
+        await tester.tap(find.byTooltip('Add expense'));
+        await tester.pumpAndSettle();
+        await tester.enterText(_field('e.g. Dinner'), 'Dinner');
+        await tester.enterText(_field('0.00'), '600');
+        await _tapSave(tester);
+
+        // On Home: Trip to Dahab has the expense, Apartment has none.
+        expect(find.text('You get EGP 300'), findsOneWidget);
+        expect(find.text('No expenses yet'), findsOneWidget);
+
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('You get EGP 300'), findsOneWidget);
+        expect(find.text('No expenses yet'), findsOneWidget);
       });
 
       testWidgets("a group that is not the user's shows a message", (

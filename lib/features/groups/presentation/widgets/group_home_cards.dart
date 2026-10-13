@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_balance_text.dart';
 import 'package:splitzy/features/groups/presentation/widgets/group_initial_tile.dart';
 import 'package:splitzy/features/groups/presentation/widgets/member_avatar_stack.dart';
 
@@ -14,6 +15,7 @@ class GroupHomeCards extends StatelessWidget {
     required this.groups,
     required this.onOpenGroup,
     this.errorMessage,
+    this.balances = const {},
   });
 
   final List<Group>? groups;
@@ -21,6 +23,10 @@ class GroupHomeCards extends StatelessWidget {
 
   /// Opens a group's page.
   final ValueChanged<Group> onOpenGroup;
+
+  /// The user's balance in each group, by group id; groups missing from
+  /// it show no balance (e.g. still loading).
+  final Map<String, GroupBalance> balances;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +62,7 @@ class GroupHomeCards extends StatelessWidget {
               _GroupHomeCard(
                 group: group,
                 index: i,
+                balance: balances[group.id],
                 onTap: () => onOpenGroup(group),
               ),
             ],
@@ -70,6 +77,7 @@ class _GroupHomeCard extends StatelessWidget {
   const _GroupHomeCard({
     required this.group,
     required this.index,
+    required this.balance,
     required this.onTap,
   });
 
@@ -82,6 +90,7 @@ class _GroupHomeCard extends StatelessWidget {
 
   final Group group;
   final int index;
+  final GroupBalance? balance;
   final VoidCallback onTap;
 
   @override
@@ -118,6 +127,10 @@ class _GroupHomeCard extends StatelessWidget {
                   members: group.members,
                   maxVisible: _maxAvatars,
                 ),
+                if (balance != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  GroupBalanceText(balance: balance),
+                ],
               ],
             ),
           ),

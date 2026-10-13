@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_balance_text.dart';
 import 'package:splitzy/features/groups/presentation/widgets/group_list_card.dart';
 
 /// The Groups tab: a title with the number of groups and a New Group button,
@@ -18,6 +19,7 @@ class GroupsScreen extends StatelessWidget {
     required this.onOpenGroup,
     required this.onRetry,
     this.errorMessage,
+    this.balances = const {},
   });
 
   /// The decorative circle's diameter, as a fraction of the screen width,
@@ -29,6 +31,10 @@ class GroupsScreen extends StatelessWidget {
 
   final List<Group>? groups;
   final String? errorMessage;
+
+  /// The user's balance in each group, by group id; groups missing from
+  /// it show no balance (e.g. still loading).
+  final Map<String, GroupBalance> balances;
   final VoidCallback onNewGroup;
 
   /// Opens a group's page.
@@ -78,6 +84,7 @@ class GroupsScreen extends StatelessWidget {
         itemBuilder: (_, i) => GroupListCard(
           group: groups[i],
           index: i,
+          balance: balances[groups[i].id],
           onTap: () => onOpenGroup(groups[i]),
         ),
       );

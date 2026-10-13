@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:splitzy/core/format/date_format.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/groups/domain/entities/group.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_balance_text.dart';
 import 'package:splitzy/features/groups/presentation/widgets/group_initial_tile.dart';
 import 'package:splitzy/features/groups/presentation/widgets/member_avatar_stack.dart';
 
@@ -12,6 +13,7 @@ class GroupListCard extends StatelessWidget {
     super.key,
     required this.group,
     required this.index,
+    this.balance,
     this.onTap,
   });
 
@@ -22,6 +24,9 @@ class GroupListCard extends StatelessWidget {
 
   /// The group's position in the list; picks the tile's color.
   final int index;
+
+  /// The user's balance in the group; `null` while unknown (not shown).
+  final GroupBalance? balance;
 
   /// Opens the group's page.
   final VoidCallback? onTap;
@@ -91,6 +96,10 @@ class GroupListCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (balance != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      GroupBalanceText(balance: balance),
+                    ],
                   ],
                 ),
               ),

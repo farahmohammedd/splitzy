@@ -15,6 +15,7 @@ import 'package:splitzy/features/groups/domain/entities/group.dart';
 import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
 import 'package:splitzy/features/groups/presentation/screens/create_group_page.dart';
 import 'package:splitzy/features/groups/presentation/screens/groups_page.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_balance_text.dart';
 import 'package:splitzy/features/groups/presentation/widgets/group_home_cards.dart';
 import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
 
@@ -185,27 +186,16 @@ class HomeRoute extends ConsumerWidget {
     final loaded = failed ? null : groups?.value;
     final hasGroups = loaded != null && loaded.isNotEmpty;
 
-    // The user's balance in each group, from that group's expenses.
-    var balanceLoading = groups == null || (loaded == null && !failed);
-    var balanceFailed = failed;
-    var hasExpenses = false;
-    final groupBalances = <int>[];
-    if (user != null) {
-      for (final group in loaded ?? const <Group>[]) {
-        final expenses = ref.watch(groupExpensesProvider(group.id));
-        final list = expenses.value;
-        if (expenses.hasError && !expenses.isLoading) {
-          balanceFailed = true;
-        } else if (list == null) {
-          balanceLoading = true;
-        } else {
-          hasExpenses = hasExpenses || list.isNotEmpty;
-          final memberIds = [for (final member in group.members) member.id];
-          groupBalances.add(balancesOf(list, memberIds)[user.id] ?? 0);
-        }
-      }
-    }
-    final overall = overallBalance(groupBalances);
+    final balances = user == null
+        ? _noBalances
+        : _watchGroupBalances(ref, loaded ?? const [], user.id);
+    final balanceLoading =
+        groups == null || (loaded == null && !failed) || balances.loading;
+    final balanceFailed = failed || balances.failed;
+    final hasExpenses = balances.byGroup.values.any((b) => b.hasExpenses);
+    final overall = overallBalance([
+      for (final balance in balances.byGroup.values) balance.amount,
+    ]);
 
     return HomeScreen(
       name: user?.nameToShow ?? '',
@@ -221,12 +211,52 @@ class HomeRoute extends ConsumerWidget {
           : GroupHomeCards(
               groups: loaded,
               errorMessage: failed ? messageFor(groups.error) : null,
+              balances: balances.byGroup,
               onOpenGroup: (group) =>
                   context.push(AppRoutes.groupDetails(group.id)),
             ),
       onSeeAllGroups: hasGroups ? () => context.go(AppRoutes.groups) : null,
     );
   }
+}
+
+/// The user's balance in each group whose expenses are loaded, by group id,
+/// and whether any group's expenses are still loading or failed to load.
+typedef _GroupBalances = ({
+  Map<String, GroupBalance> byGroup,
+  bool loading,
+  bool failed,
+});
+
+const _GroupBalances _noBalances = (byGroup: {}, loading: false, failed: false);
+
+/// Watches each of [groups]' expenses and works out [userId]'s balance in
+/// each, with the expenses feature's balance rules. The app root connects
+/// the groups and expenses features here.
+_GroupBalances _watchGroupBalances(
+  WidgetRef ref,
+  List<Group> groups,
+  String userId,
+) {
+  final byGroup = <String, GroupBalance>{};
+  var loading = false;
+  var failed = false;
+  for (final group in groups) {
+    final expenses = ref.watch(groupExpensesProvider(group.id));
+    final list = expenses.value;
+    if (expenses.hasError && !expenses.isLoading) {
+      failed = true;
+    } else if (list == null) {
+      loading = true;
+    } else {
+      final memberIds = [for (final member in group.members) member.id];
+      byGroup[group.id] = (
+        amount: balancesOf(list, memberIds)[userId] ?? 0,
+        hasExpenses: list.isNotEmpty,
+      );
+    }
+  }
+  return (byGroup: byGroup, loading: loading, failed: failed);
 }
 
 /// Connects [GroupsPage] to the signed-in user (the app root may connect
@@ -239,9 +269,11 @@ class GroupsRoute extends ConsumerWidget {
     final user = ref.watch(authStateProvider).value;
     // Signed out: the redirect is about to leave this tab.
     if (user == null) return const SizedBox.shrink();
+    final groups = ref.watch(groupsProvider(user.id)).value ?? const [];
 
     return GroupsPage(
       ownerId: user.id,
+      balances: _watchGroupBalances(ref, groups, user.id).byGroup,
       onNewGroup: () => context.push(AppRoutes.newGroup),
       onOpenGroup: (group) => context.push(AppRoutes.groupDetails(group.id)),
     );
