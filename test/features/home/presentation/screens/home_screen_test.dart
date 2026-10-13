@@ -74,6 +74,32 @@ void main() {
       expect(find.text('View all'), findsNothing);
     });
 
+    testWidgets('shows the groups content in place of the empty state, with '
+        'See all', (tester) async {
+      var seeAll = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: HomeScreen(
+            name: 'Sam',
+            onAddExpense: () {},
+            onNewGroup: () {},
+            groups: const Text('The groups'),
+            onSeeAllGroups: () => seeAll++,
+          ),
+        ),
+      );
+
+      expect(find.text('The groups'), findsOneWidget);
+      expect(find.text('No groups yet'), findsNothing);
+      // Recent Activity keeps its empty state.
+      expect(find.text('No activity yet'), findsOneWidget);
+
+      await tester.tap(find.text('See all'));
+
+      expect(seeAll, 1);
+    });
+
     testWidgets('reports the quick actions', (tester) async {
       final calls = await _pumpHome(tester);
 

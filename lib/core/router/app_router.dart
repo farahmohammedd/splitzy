@@ -72,17 +72,16 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
-          // TEMPORARY: Groups and Activity show ComingSoonTab until their
-          // features are built.
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: AppRoutes.groups,
-                builder: (context, state) =>
-                    const ComingSoonTab(title: 'Groups'),
+                builder: (context, state) => const GroupsRoute(),
               ),
             ],
           ),
+          // TEMPORARY: Activity shows ComingSoonTab until its feature is
+          // built.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -102,6 +101,11 @@ GoRouter appRouter(Ref ref) {
           ),
         ],
       ),
+      // Outside the shell, so it covers the tabs and hides the bottom bar.
+      GoRoute(
+        path: AppRoutes.newGroup,
+        builder: (context, state) => const NewGroupRoute(),
+      ),
     ],
   );
   // Sign-in, sign-out and profile changes re-run the redirect.
@@ -117,12 +121,13 @@ const _signedOutLocations = {
   AppRoutes.signUp,
 };
 
-/// The signed-in tabs; signed-out users are sent to Splash.
+/// The signed-in screens; signed-out users are sent to Splash.
 const _signedInLocations = {
   AppRoutes.home,
   AppRoutes.groups,
   AppRoutes.activity,
   AppRoutes.profile,
+  AppRoutes.newGroup,
 };
 
 /// Where to send the user from [location], or `null` to stay.

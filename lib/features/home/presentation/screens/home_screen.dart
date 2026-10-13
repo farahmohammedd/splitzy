@@ -8,16 +8,19 @@ import 'package:splitzy/features/home/presentation/widgets/home_section.dart';
 import 'package:splitzy/features/home/presentation/widgets/quick_actions.dart';
 
 /// The signed-in home screen: greeting, total balance, quick actions, the
-/// user's groups and recent activity (both empty until those features exist).
+/// user's groups and recent activity (empty until that feature exists).
 ///
-/// Presentation only: [name] comes from the caller and every action is
-/// reported through a callback. Log out lives on the Profile tab.
+/// Presentation only: [name] and the groups content come from the caller and
+/// every action is reported through a callback. Log out lives on the Profile
+/// tab.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
     required this.name,
     required this.onAddExpense,
     required this.onNewGroup,
+    this.groups,
+    this.onSeeAllGroups,
   });
 
   /// The decorative circle's diameter, as a fraction of the screen width,
@@ -32,6 +35,12 @@ class HomeScreen extends StatelessWidget {
   final String name;
   final VoidCallback onAddExpense;
   final VoidCallback onNewGroup;
+
+  /// Shown under Your Groups; `null` shows its empty state.
+  final Widget? groups;
+
+  /// Shows See all next to Your Groups when set.
+  final VoidCallback? onSeeAllGroups;
 
   @override
   Widget build(BuildContext context) {
@@ -100,10 +109,12 @@ class HomeScreen extends StatelessWidget {
                               onNewGroup: onNewGroup,
                             ),
                             const SizedBox(height: AppSpacing.xl),
-                            const HomeSection(
+                            HomeSection(
                               title: 'Your Groups',
                               emptyIcon: Icons.group_outlined,
                               emptyMessage: 'No groups yet',
+                              onSeeAll: onSeeAllGroups,
+                              child: groups,
                             ),
                             const SizedBox(height: AppSpacing.lg),
                             const HomeSection(

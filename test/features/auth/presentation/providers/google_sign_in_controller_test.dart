@@ -8,6 +8,7 @@ import 'package:splitzy/features/auth/presentation/providers/google_sign_in_cont
 import 'package:splitzy/injection_container.dart';
 
 import '../../../../helpers/fake_auth_repository.dart';
+import '../../../../helpers/fake_group_repository.dart';
 import '../../../../helpers/fake_error_reporter.dart';
 
 final _login = googleSignInControllerProvider(GoogleSignInOrigin.login);
@@ -24,6 +25,7 @@ void main() {
     container = ProviderContainer.test(
       overrides: InjectionContainer(
         authRepository: repository,
+        groupRepository: FakeGroupRepository(),
         errorReporter: reporter,
       ).overrides,
     );

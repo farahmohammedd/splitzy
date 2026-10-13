@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Splitzy security rules. Deployed by pasting this file into the Firebase
+// console (Firestore Database → Rules → Publish). Data model:
+// .claude/rules/architecture.md → Firestore data model.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validNewGroup(data) {
+      return data.keys().hasOnly(['ownerId', 'name', 'members', 'createdAt'])
+        && data.ownerId == request.auth.uid
+        && data.name is string
+        && data.name.size() > 0 && data.name.size() <= 50
+        && data.members is list
+        && data.members.size() >= 2 && data.members.size() <= 50
+        && data.createdAt == request.time;
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if signedIn() && validNewGroup(request.resource.data);
+      // Editing and deleting groups are not built yet.
+      allow update, delete: if false;
+
+      // Defined with the Expenses phase.
+      match /expenses/{expenseId} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

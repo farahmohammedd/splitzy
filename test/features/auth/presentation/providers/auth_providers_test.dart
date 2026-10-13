@@ -5,6 +5,7 @@ import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart
 import 'package:splitzy/injection_container.dart';
 
 import '../../../../helpers/fake_auth_repository.dart';
+import '../../../../helpers/fake_group_repository.dart';
 import '../../../../helpers/fake_error_reporter.dart';
 
 void main() {
@@ -22,6 +23,7 @@ void main() {
       final container = ProviderContainer.test(
         overrides: InjectionContainer(
           authRepository: repository,
+          groupRepository: FakeGroupRepository(),
           errorReporter: FakeErrorReporter(),
         ).overrides,
       );

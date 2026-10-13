@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:splitzy/core/error/failures.dart';
+import 'package:splitzy/core/router/app_routes.dart';
 import 'package:splitzy/core/theme/app_brand_colors.dart';
 import 'package:splitzy/core/theme/app_spacing.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart';
+import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
+import 'package:splitzy/features/groups/presentation/screens/create_group_page.dart';
+import 'package:splitzy/features/groups/presentation/screens/groups_page.dart';
+import 'package:splitzy/features/groups/presentation/widgets/group_home_cards.dart';
 import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
 
 /// The signed-in area: the current tab ([navigationShell]) above a bottom bar
@@ -168,8 +174,8 @@ class _BottomBarItem extends StatelessWidget {
 }
 
 /// Connects [HomeScreen] to the features it shows. The app root may connect
-/// features: Home will gather groups and balances from their own features.
-/// For now it shows the signed-in user's name.
+/// features: Home shows the signed-in user's name and their groups, and will
+/// gather balances from their own feature.
 class HomeRoute extends ConsumerWidget {
   const HomeRoute({super.key});
 
@@ -177,18 +183,79 @@ class HomeRoute extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Briefly null while signing out, before the redirect leaves Home.
     final user = ref.watch(authStateProvider).value;
+    final groups = user == null ? null : ref.watch(groupsProvider(user.id));
+    // While loading again after a failure, Home shows loading.
+    final failed = groups != null && groups.hasError && !groups.isLoading;
+    final loaded = failed ? null : groups?.value;
+    final hasGroups = loaded != null && loaded.isNotEmpty;
 
     return HomeScreen(
       name: user?.nameToShow ?? '',
-      // TEMPORARY: replaced by the Expenses and Groups flows in their phases.
+      // TEMPORARY: replaced by the Add Expense flow in the Expenses phase.
       onAddExpense: () => _showComingSoon(context),
-      onNewGroup: () => _showComingSoon(context),
+      onNewGroup: () => context.push(AppRoutes.newGroup),
+      // No groups yet: Home shows its own empty state.
+      groups: loaded != null && !hasGroups
+          ? null
+          : GroupHomeCards(
+              groups: loaded,
+              errorMessage: failed ? messageFor(groups.error) : null,
+            ),
+      onSeeAllGroups: hasGroups ? () => context.go(AppRoutes.groups) : null,
     );
   }
 }
 
-/// TEMPORARY: the page of a tab whose feature is not built yet (Groups,
-/// Activity). Each is replaced by its real page in its own phase.
+/// Connects [GroupsPage] to the signed-in user (the app root may connect
+/// features) and opens New Group.
+class GroupsRoute extends ConsumerWidget {
+  const GroupsRoute({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    // Signed out: the redirect is about to leave this tab.
+    if (user == null) return const SizedBox.shrink();
+
+    return GroupsPage(
+      ownerId: user.id,
+      onNewGroup: () => context.push(AppRoutes.newGroup),
+    );
+  }
+}
+
+/// Connects [CreateGroupPage] to the signed-in user (the app root may
+/// connect features) and closes it on Back or once the group is created.
+class NewGroupRoute extends ConsumerWidget {
+  const NewGroupRoute({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    // Signed out: the redirect is about to leave this screen.
+    if (user == null) return const SizedBox.shrink();
+
+    return CreateGroupPage(
+      ownerId: user.id,
+      ownerName: user.nameToShow,
+      onBack: () => _close(context),
+      onCreated: () => _close(context),
+    );
+  }
+
+  /// Returns to the screen underneath, or to Groups when there is none (e.g.
+  /// the screen was opened directly).
+  static void _close(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.groups);
+    }
+  }
+}
+
+/// TEMPORARY: the page of a tab whose feature is not built yet (Activity).
+/// Replaced by its real page in its own phase.
 class ComingSoonTab extends StatelessWidget {
   const ComingSoonTab({super.key, required this.title});
 

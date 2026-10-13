@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +9,12 @@ import 'package:splitzy/core/error/crashlytics_error_reporter.dart';
 import 'package:splitzy/core/error/error_reporter_provider.dart';
 import 'package:splitzy/features/auth/data/repositories/firebase_auth_repository.dart';
 import 'package:splitzy/features/auth/presentation/providers/auth_providers.dart';
+import 'package:splitzy/features/groups/data/repositories/firestore_group_repository.dart';
+import 'package:splitzy/features/groups/presentation/providers/group_providers.dart';
 import 'package:splitzy/injection_container.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_group_repository.dart';
 import 'helpers/fake_error_reporter.dart';
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -19,18 +23,28 @@ class _MockCrashlytics extends Mock implements FirebaseCrashlytics {}
 
 class _MockGoogleSignIn extends Mock implements GoogleSignIn {}
 
+class _MockFirestore extends Mock implements FirebaseFirestore {}
+
 void main() {
   group('InjectionContainer', () {
     test('supplies its instances through the providers', () {
       final repository = FakeAuthRepository();
       addTearDown(repository.dispose);
+      final groupRepository = FakeGroupRepository();
+      addTearDown(groupRepository.dispose);
       final injection = InjectionContainer(
         authRepository: repository,
+        groupRepository: groupRepository,
         errorReporter: FakeErrorReporter(),
       );
       final container = ProviderContainer.test(overrides: injection.overrides);
 
       expect(container.read(authRepositoryProvider), same(repository));
+      expect(container.read(groupRepositoryProvider), same(groupRepository));
+      expect(
+        container.read(createGroupUseCaseProvider),
+        same(injection.createGroupUseCase),
+      );
       expect(
         container.read(signInUseCaseProvider),
         same(injection.signInUseCase),
@@ -46,9 +60,11 @@ void main() {
         firebaseAuth: _MockFirebaseAuth(),
         crashlytics: _MockCrashlytics(),
         googleSignIn: _MockGoogleSignIn(),
+        firestore: _MockFirestore(),
       );
 
       expect(injection.authRepository, isA<FirebaseAuthRepository>());
+      expect(injection.groupRepository, isA<FirestoreGroupRepository>());
       expect(injection.errorReporter, isA<CrashlyticsErrorReporter>());
     });
 
@@ -59,6 +75,7 @@ void main() {
       final container = ProviderContainer.test(
         overrides: InjectionContainer(
           authRepository: repository,
+          groupRepository: FakeGroupRepository(),
           errorReporter: reporter,
         ).overrides,
       );
@@ -71,6 +88,7 @@ void main() {
       addTearDown(repository.dispose);
       final injection = InjectionContainer(
         authRepository: repository,
+        groupRepository: FakeGroupRepository(),
         errorReporter: FakeErrorReporter(),
       );
 

@@ -12,6 +12,10 @@ import 'package:splitzy/core/router/home_shell.dart';
 import 'package:splitzy/features/auth/domain/entities/app_user.dart';
 import 'package:splitzy/features/auth/domain/failures/auth_failure.dart';
 import 'package:splitzy/features/auth/presentation/screens/login_screen.dart';
+import 'package:splitzy/features/groups/domain/entities/group.dart';
+import 'package:splitzy/features/groups/domain/entities/member.dart';
+import 'package:splitzy/features/groups/presentation/screens/create_group_screen.dart';
+import 'package:splitzy/features/groups/presentation/screens/groups_screen.dart';
 import 'package:splitzy/features/auth/presentation/widgets/auth_error_text.dart';
 import 'package:splitzy/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:splitzy/features/home/presentation/screens/home_screen.dart';
@@ -20,13 +24,16 @@ import 'package:splitzy/features/splash/presentation/screens/splash_screen.dart'
 import 'package:splitzy/injection_container.dart';
 
 import '../../helpers/fake_auth_repository.dart';
+import '../../helpers/fake_group_repository.dart';
 import '../../helpers/fake_error_reporter.dart';
 
 /// Pumps the app with [repository] (signed out by default) as its auth
-/// backend and returns it.
+/// backend and [groups] (empty by default) as its group storage, and returns
+/// the auth backend.
 Future<FakeAuthRepository> _pumpApp(
   WidgetTester tester, {
   FakeAuthRepository? repository,
+  FakeGroupRepository? groups,
 }) async {
   // Screens scroll on small surfaces; a phone size keeps taps on-screen.
   tester.view.physicalSize = const Size(390, 844);
@@ -34,10 +41,13 @@ Future<FakeAuthRepository> _pumpApp(
   addTearDown(tester.view.reset);
   final auth = repository ?? FakeAuthRepository();
   addTearDown(auth.dispose);
+  final groupRepository = groups ?? FakeGroupRepository();
+  addTearDown(groupRepository.dispose);
   await tester.pumpWidget(
     ProviderScope(
       overrides: InjectionContainer(
         authRepository: auth,
+        groupRepository: groupRepository,
         errorReporter: FakeErrorReporter(),
       ).overrides,
       child: const SplitzyApp(),
@@ -87,6 +97,30 @@ Future<void> _openProfile(WidgetTester tester) async {
 }
 
 final _logOut = find.text('Log out');
+
+/// A group named [name], owned by the default signed-in user unless
+/// [ownerId] says otherwise.
+Group _group(String name, {String? ownerId}) {
+  final owner = ownerId ?? FakeAuthRepository.defaultUser.id;
+  return Group(
+    id: name,
+    ownerId: owner,
+    name: name,
+    members: [
+      Member(id: owner, name: 'Owner'),
+      const Member(id: 'sara', name: 'Sara'),
+    ],
+    createdAt: DateTime(2026, 10, 12),
+  );
+}
+
+/// Taps the Create Group button (the title has the same text).
+Future<void> _tapCreateGroup(WidgetTester tester) async {
+  final button = find.widgetWithText(FilledButton, 'Create Group');
+  await tester.ensureVisible(button);
+  await tester.tap(button);
+  await tester.pumpAndSettle();
+}
 
 /// Fills in and submits the Login form.
 Future<void> _logIn(
@@ -598,6 +632,7 @@ void main() {
           AppRoutes.groups,
           AppRoutes.activity,
           AppRoutes.profile,
+          AppRoutes.newGroup,
         ]) {
           _router(tester).go(location);
           await tester.pumpAndSettle();
@@ -609,12 +644,16 @@ void main() {
 
     group('signed-in tabs', () {
       /// Pumps the app signed in and waits until it reaches Home.
-      Future<void> pumpSignedIn(WidgetTester tester) async {
+      Future<void> pumpSignedIn(
+        WidgetTester tester, {
+        FakeGroupRepository? groups,
+      }) async {
         await _pumpApp(
           tester,
           repository: FakeAuthRepository(
             signedInUser: FakeAuthRepository.defaultUser,
           ),
+          groups: groups,
         );
         await _finishLoading(tester);
       }
@@ -656,10 +695,84 @@ void main() {
       ) async {
         await pumpSignedIn(tester);
 
-        await tester.tap(tab('Groups'));
+        await tester.tap(tab('Activity'));
         await tester.pumpAndSettle();
 
         expect(find.text('Coming soon'), findsOneWidget);
+      });
+
+      testWidgets("the Groups tab lists the signed-in user's groups", (
+        tester,
+      ) async {
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(
+            groups: [
+              _group('Trip to Dahab'),
+              _group('Apartment'),
+              _group('Not mine', ownerId: 'someone-else'),
+            ],
+          ),
+        );
+
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(GroupsScreen), findsOneWidget);
+        expect(find.text('2 groups'), findsOneWidget);
+        expect(find.text('Trip to Dahab'), findsOneWidget);
+        expect(find.text('Apartment'), findsOneWidget);
+        expect(find.text('Not mine'), findsNothing);
+      });
+
+      testWidgets('New Group on the Groups tab creates a group and returns '
+          'to the tab, which shows it', (tester) async {
+        await pumpSignedIn(tester);
+        await tester.tap(tab('Groups'));
+        await tester.pumpAndSettle();
+        expect(find.text('No groups yet'), findsOneWidget);
+
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+        expect(_location(tester), AppRoutes.newGroup);
+        await tester.enterText(_field('e.g. Trip to Dahab'), 'Trip to Dahab');
+        await tester.enterText(_field('Enter member name'), 'Sara');
+        await _tapCreateGroup(tester);
+
+        expect(_location(tester), AppRoutes.groups);
+        expect(find.text('1 group'), findsOneWidget);
+        expect(find.text('Trip to Dahab'), findsOneWidget);
+      });
+
+      testWidgets("Home shows the user's groups; See all opens the Groups "
+          'tab', (tester) async {
+        await pumpSignedIn(
+          tester,
+          groups: FakeGroupRepository(groups: [_group('Trip to Dahab')]),
+        );
+
+        expect(
+          find.descendant(
+            of: find.byType(HomeScreen),
+            matching: find.text('Trip to Dahab'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('No groups yet'), findsNothing);
+
+        await _tapText(tester, 'See all');
+
+        expect(_location(tester), AppRoutes.groups);
+        expect(find.byType(GroupsScreen), findsOneWidget);
+      });
+
+      testWidgets('Home without groups shows its empty state and no See all', (
+        tester,
+      ) async {
+        await pumpSignedIn(tester);
+
+        expect(find.text('No groups yet'), findsOneWidget);
+        expect(find.text('See all'), findsNothing);
       });
 
       testWidgets('Home greets the signed-in user by name', (tester) async {
@@ -674,23 +787,83 @@ void main() {
         );
       });
 
-      testWidgets("Home's quick actions say Coming soon", (tester) async {
+      testWidgets("Home's Add Expense says Coming soon", (tester) async {
         await pumpSignedIn(tester);
 
-        for (final action in ['Add Expense', 'New Group']) {
-          await tester.tap(find.text(action));
-          await tester.pump();
+        await tester.tap(find.text('Add Expense'));
+        await tester.pump();
 
-          expect(
-            find.descendant(
-              of: find.byType(SnackBar),
-              matching: find.text('Coming soon'),
-            ),
-            findsOneWidget,
-            reason: action,
-          );
-          expect(_location(tester), AppRoutes.home, reason: action);
-        }
+        expect(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.text('Coming soon'),
+          ),
+          findsOneWidget,
+        );
+        expect(_location(tester), AppRoutes.home);
+      });
+
+      testWidgets("Home's New Group opens Create Group over the tabs", (
+        tester,
+      ) async {
+        await pumpSignedIn(tester);
+
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+
+        expect(_location(tester), AppRoutes.newGroup);
+        expect(find.byType(CreateGroupScreen), findsOneWidget);
+        // The bottom bar is hidden while creating a group.
+        expect(find.byType(HomeShell), findsNothing);
+      });
+
+      testWidgets('Back on Create Group returns to Home', (tester) async {
+        await pumpSignedIn(tester);
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+
+        expect(_location(tester), AppRoutes.home);
+      });
+
+      testWidgets('creating a group stores it for the signed-in user and '
+          'returns to Home', (tester) async {
+        final groups = FakeGroupRepository();
+        await pumpSignedIn(tester, groups: groups);
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(_field('e.g. Trip to Dahab'), 'Trip to Dahab');
+        await tester.enterText(_field('Enter member name'), 'Sara');
+        await tester.tap(find.byTooltip('Add member'));
+        await tester.pump();
+        await _tapCreateGroup(tester);
+
+        final call = groups.createCalls.single;
+        expect(call.ownerId, FakeAuthRepository.defaultUser.id);
+        expect(call.ownerName, FakeAuthRepository.defaultUser.nameToShow);
+        expect(call.name, 'Trip to Dahab');
+        expect(call.memberNames, ['Sara']);
+        expect(_location(tester), AppRoutes.home);
+      });
+
+      testWidgets('a failed create stays on Create Group with its message', (
+        tester,
+      ) async {
+        final groups = FakeGroupRepository()
+          ..failNextWith(const NetworkFailure());
+        await pumpSignedIn(tester, groups: groups);
+        await tester.tap(find.text('New Group'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(_field('e.g. Trip to Dahab'), 'Trip');
+        await tester.enterText(_field('Enter member name'), 'Sara');
+        await _tapCreateGroup(tester);
+
+        expect(_location(tester), AppRoutes.newGroup);
+        expect(find.text(const NetworkFailure().message), findsOneWidget);
       });
 
       testWidgets('the bottom bar fits a small phone with 2x text scaling', (
@@ -767,6 +940,7 @@ void main() {
       AppRoutes.groups,
       AppRoutes.activity,
       AppRoutes.profile,
+      AppRoutes.newGroup,
     ];
 
     test('never redirects away from Launch', () {
