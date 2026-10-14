@@ -211,9 +211,11 @@ A route's UI is two widgets in `presentation/screens/`, each file named after it
 - A Page that runs more than one operation shows one error at a time: starting an attempt
   resets the others with `ref.invalidate(...)`, so the message shown is the latest one.
 - A screen with no controller (e.g. Splash, Launch) has no Page.
-- **Unresolved**: where presentation input models (e.g. `SignUpDetails`) and cross-feature
-  connector widgets (e.g. `_HomeRoute` in `app_router.dart`) live. Decide before adding
-  another one.
+- **Decided**: cross-feature connector widgets (`HomeRoute`, `GroupsRoute`,
+  `NewGroupRoute`, `AddExpenseRoute`, `GroupDetailsRoute`) live in
+  `lib/core/router/home_shell.dart`, part of the app root.
+- **Unresolved**: where presentation input models (e.g. `SignUpDetails`) live. Decide
+  before adding another one.
 
 ### Navigation
 

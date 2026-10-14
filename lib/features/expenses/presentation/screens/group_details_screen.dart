@@ -586,22 +586,25 @@ class _ExpenseRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           // Shares the row with the description, wrapping on narrow screens
-          // with large text instead of overflowing.
+          // with large text instead of overflowing; kept at the row's end.
           Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatEgp(expense.amount),
-                  textAlign: TextAlign.end,
-                  style: textTheme.titleSmall,
-                ),
-                Text(
-                  formatMonthDay(expense.createdAt),
-                  textAlign: TextAlign.end,
-                  style: textTheme.bodySmall,
-                ),
-              ],
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatEgp(expense.amount),
+                    textAlign: TextAlign.end,
+                    style: textTheme.titleSmall,
+                  ),
+                  Text(
+                    formatMonthDay(expense.createdAt),
+                    textAlign: TextAlign.end,
+                    style: textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

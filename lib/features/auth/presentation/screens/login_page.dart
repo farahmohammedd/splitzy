@@ -9,15 +9,9 @@ import 'package:splitzy/features/auth/presentation/screens/login_screen.dart';
 /// forwards log-in attempts and passes their progress and failure message
 /// back to the screen. Navigation callbacks come from the router.
 class LoginPage extends ConsumerWidget {
-  const LoginPage({
-    super.key,
-    required this.onBack,
-    required this.onForgotPassword,
-    required this.onSignUp,
-  });
+  const LoginPage({super.key, required this.onBack, required this.onSignUp});
 
   final VoidCallback onBack;
-  final VoidCallback onForgotPassword;
   final VoidCallback onSignUp;
 
   @override
@@ -39,7 +33,6 @@ class LoginPage extends ConsumerWidget {
             .read(loginControllerProvider.notifier)
             .logIn(email: email, password: password);
       },
-      onForgotPassword: onForgotPassword,
       onContinueWithGoogle: () {
         ref.invalidate(loginControllerProvider);
         ref.read(googleProvider.notifier).signIn();

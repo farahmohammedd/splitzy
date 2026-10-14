@@ -108,6 +108,17 @@ void main() {
       );
     });
 
+    testWidgets('shows EGP in the amount field before anything is typed', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+
+      expect(
+        find.descendant(of: _amount, matching: find.text('EGP')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('starts on the initial group when given', (tester) async {
       await _pumpScreen(tester, initialGroupId: 'flat');
 
