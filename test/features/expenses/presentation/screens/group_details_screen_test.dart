@@ -148,6 +148,27 @@ void main() {
       expect(find.text('View all'), findsNothing);
     });
 
+    testWidgets("keeps each expense's amount at the end of its row", (
+      tester,
+    ) async {
+      // Wide enough that the amount is narrower than the room it may take
+      // (the test font is wider than real fonts).
+      tester.view.physicalSize = const Size(1024, 768);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await _pumpScreen(tester);
+
+      final amount = tester.getTopRight(find.text('EGP 1,600'));
+      final date = tester.getTopRight(find.text('Oct 9'));
+      final row = tester.getTopRight(
+        find.ancestor(of: find.text('Hotel'), matching: find.byType(Row)).first,
+      );
+
+      // Both end where the row's content ends, not halfway across it.
+      expect(amount.dx, moreOrLessEquals(row.dx, epsilon: 1));
+      expect(date.dx, moreOrLessEquals(row.dx, epsilon: 1));
+    });
+
     testWidgets('says when there are no expenses yet', (tester) async {
       await _pumpScreen(tester, expenses: const []);
 

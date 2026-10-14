@@ -346,9 +346,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                       textInputAction: TextInputAction.done,
                       style: textTheme.titleLarge,
-                      decoration: const InputDecoration(
+                      // "EGP" stays visible even before anything is typed,
+                      // as in the design reference (prefixText only shows
+                      // while the field is focused or filled).
+                      decoration: InputDecoration(
                         hintText: '0.00',
-                        prefixText: 'EGP  ',
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(
+                            left: AppSpacing.lg,
+                            right: AppSpacing.sm,
+                          ),
+                          child: Text('EGP', style: textTheme.titleMedium),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(),
                         errorMaxLines: 3,
                       ),
                     ),
