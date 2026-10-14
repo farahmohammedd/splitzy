@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The cream behind the launcher icon, matching the logo's tile. -->
+    <color name="ic_launcher_background">#FDFAEF</color>
+</resources>
