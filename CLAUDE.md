@@ -10,9 +10,10 @@ Users can:
 - record shared expenses
 - split expenses equally or by custom amounts
 - view balances
-- settle debts
+- settle debts (future)
 - sync application data with Firebase/Firestore
-- use the application with appropriate loading, empty, error and offline states
+- use the application with appropriate loading, empty and error states
+  (offline use is future work)
 
 The project is being developed as an AI-first Flutter project.
 
@@ -38,16 +39,23 @@ Completed foundations:
 - Firebase configured for Android (FlutterFire) and initialized in `main()`
 - Google Sign-In: Implemented and working.
 - Firebase Crashlytics: Integrated and working.
+- Profile tab with log out; Home with the bottom navigation bar
+- Groups: Create Group, the Groups tab and group cards with the user's balance
+- Expenses: Add Expense with equal and custom splits
+- Group details: the group's total, the user's share and balance, every
+  member's balance and its expenses
+- Home balance card: what the user is owed and owes across groups
+- Firestore security rules for groups and expenses (`firestore.rules`)
 
 Current temporary state:
 
-- Forgot Password is a no-op until its feature is implemented.
+- The Activity tab shows "Coming soon".
+- Home's Recent Activity section always shows "No activity yet".
 
-Email/password authentication (sign in, register, log out) and the minimal Home
-screen are implemented. Feature folders follow the layout in
-`.claude/rules/architecture.md` → Layout.
-Firestore data, groups, expenses, balances, settlements and offline persistence
-are implemented only when explicitly requested as the next approved step.
+Authentication, groups, expenses and balances are implemented. Feature folders
+follow the layout in `.claude/rules/architecture.md` → Layout.
+Settlements, editing or deleting data and offline persistence are implemented
+only when explicitly requested as the next approved step.
 
 Do not assume that a UI screen means its backend functionality exists.
 
@@ -90,6 +98,11 @@ Not to be implemented until the developer decides otherwise:
   members are names only and a group belongs to its creator, who is its first member.
 - Settlements, search, notifications.
 - Receipt scanning — cancelled until the developer decides otherwise.
+- Editing and deleting groups and expenses.
+- The Activity tab and Home's Recent Activity.
+- Forgot Password.
+- Offline use (see Open Decisions #2).
+- A custom app icon and display name.
 
 ---
 
