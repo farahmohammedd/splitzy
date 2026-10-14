@@ -18,7 +18,6 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.onBack,
     required this.onLogIn,
-    required this.onForgotPassword,
     required this.onContinueWithGoogle,
     required this.onSignUp,
     this.isSubmitting = false,
@@ -34,7 +33,6 @@ class LoginScreen extends StatefulWidget {
   /// Called with the entered email (trimmed) and password once both fields
   /// pass validation.
   final void Function(String email, String password) onLogIn;
-  final VoidCallback onForgotPassword;
   final VoidCallback onContinueWithGoogle;
   final VoidCallback onSignUp;
 
@@ -112,14 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AuthValidation.signInPassword(value ?? '')?.message,
                 onSubmitted: _submit,
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: widget.onForgotPassword,
-                  child: const Text('Forgot Password?'),
-                ),
-              ),
+              const SizedBox(height: AppSpacing.md),
               if (errorMessage != null) ...[
                 AuthErrorText(errorMessage),
                 const SizedBox(height: AppSpacing.sm),

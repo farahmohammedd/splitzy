@@ -23,12 +23,10 @@ final _passwordField = find.widgetWithText(TextField, 'Password');
 final _logIn = find.text('Log In');
 final _google = find.text('Continue with Google');
 final _signUp = find.text('Sign Up');
-final _forgot = find.text('Forgot Password?');
 
 /// Records which callbacks the screen invoked.
 class _Calls {
   int back = 0;
-  int forgot = 0;
   int google = 0;
   int signUp = 0;
   final logIns = <(String, String)>[];
@@ -57,7 +55,6 @@ Future<_Calls> _pumpLogin(
       home: LoginScreen(
         onBack: () => calls.back++,
         onLogIn: (email, password) => calls.logIns.add((email, password)),
-        onForgotPassword: () => calls.forgot++,
         onContinueWithGoogle: () => calls.google++,
         onSignUp: () => calls.signUp++,
         isSubmitting: isSubmitting,
@@ -92,7 +89,8 @@ void main() {
       expect(_passwordField, findsOneWidget);
       expect(find.byIcon(Icons.mail_outline_rounded), findsOneWidget);
       expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-      expect(_forgot, findsOneWidget);
+      // Forgot Password is not offered until its feature exists.
+      expect(find.text('Forgot Password?'), findsNothing);
       expect(_logIn, findsOneWidget);
       expect(find.text('or continue with'), findsOneWidget);
       expect(_google, findsOneWidget);
@@ -159,20 +157,16 @@ void main() {
       expect(calls.logIns, [('sam@example.com', 'secret')]);
     });
 
-    testWidgets('reports Back, Forgot Password, Google and Sign Up taps', (
-      tester,
-    ) async {
+    testWidgets('reports Back, Google and Sign Up taps', (tester) async {
       final calls = await _pumpLogin(tester);
       await tester.pump(_duration);
 
       await tester.tap(find.byTooltip('Back'));
-      await tester.tap(_forgot);
       await tester.tap(_google);
       await tester.ensureVisible(_signUp);
       await tester.tap(_signUp);
 
       expect(calls.back, 1);
-      expect(calls.forgot, 1);
       expect(calls.google, 1);
       expect(calls.signUp, 1);
       expect(calls.logIns, isEmpty);

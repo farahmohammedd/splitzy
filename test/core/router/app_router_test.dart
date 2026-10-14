@@ -237,16 +237,6 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
-    testWidgets('Forgot Password does not navigate yet', (tester) async {
-      await _pumpApp(tester);
-      await _finishLoading(tester);
-      await _tapText(tester, 'Get Started');
-
-      await _tapText(tester, 'Forgot Password?');
-
-      expect(_location(tester), AppRoutes.login);
-    });
-
     group('Google sign-in', () {
       testWidgets('from Login reaches Home', (tester) async {
         final auth = await _pumpApp(tester);

@@ -44,11 +44,8 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.login,
-        // Forgot Password is intentionally a no-op until its feature is
-        // built.
         builder: (context, state) => LoginPage(
           onBack: () => _back(context),
-          onForgotPassword: () {},
           onSignUp: () => context.push(AppRoutes.signUp),
         ),
       ),
